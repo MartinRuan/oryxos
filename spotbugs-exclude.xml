@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exclude test classes -->
+    <Match>
+        <Class name="~.*\.*Test" />
+    </Match>
+    <Match>
+        <Class name="~.*\.*Tests" />
+    </Match>
+
+    <!-- Exclude informational Spring Endpoint notifications from FindSecBugs -->
+    <Match>
+        <Bug pattern="SPRING_ENDPOINT" />
+    </Match>
+
+    <!-- Exclude generated Spring Boot code if any -->
+    <Match>
+        <Package name="~.*\.generated.*" />
+    </Match>
+</FindBugsFilter>

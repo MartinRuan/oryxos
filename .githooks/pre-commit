@@ -1,0 +1,15 @@
+#!/bin/sh
+# OryxOS Git Pre-commit Hook
+# Runs Spotless format check & PMD rule validation before commit
+
+echo "Running pre-commit code formatting and quality checks..."
+
+# Check code format
+mvn spotless:check
+if [ $? -ne 0 ]; then
+    echo "ERROR: Code formatting check failed. Run 'mvn spotless:apply' to fix code style automatically."
+    exit 1
+fi
+
+echo "Pre-commit checks passed!"
+exit 0

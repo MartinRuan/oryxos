@@ -1,0 +1,60 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: oryxos
+  profiles:
+    active: dev
+  threads:
+    virtual:
+      enabled: true
+
+  autoconfigure:
+    exclude:
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAutoConfiguration
+
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:mock-key}
+
+  datasource:
+    url: jdbc:sqlite:.oryxos/oryxos.db
+    driver-class-name: org.sqlite.JDBC
+
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/migration/V1__init_schema.sql
+      continue-on-error: true
+
+# SpringDoc OpenAPI Documentation
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+# Actuator & Observability
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: oryxos

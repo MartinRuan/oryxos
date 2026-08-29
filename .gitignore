@@ -1,0 +1,35 @@
+# Target / Build outputs
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# IDE / Editor files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & Runtime
+*.log
+logs/
+.oryxos/logs/
+.oryxos/*.db
+.oryxos/oryxos.db*
+.oryxos/sessions/
+
+# Temporary / Scratch files
+tmp/
+temp/
+scratch/
