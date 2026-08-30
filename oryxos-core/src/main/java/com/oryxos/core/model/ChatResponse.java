@@ -51,6 +51,16 @@ public class ChatResponse implements Serializable {
   }
 
   /**
+   * 快速构造纯文本回复.
+   *
+   * @param content 文本回复内容
+   * @return ChatResponse 实例
+   */
+  public static ChatResponse of(String content) {
+    return builder().provider("mock").model("mock-model").content(content).build();
+  }
+
+  /**
    * 创建 Builder 构建器.
    *
    * @return Builder 实例
@@ -194,7 +204,9 @@ public class ChatResponse implements Serializable {
      * @return ChatResponse 对象
      */
     public ChatResponse build() {
-      return new ChatResponse(provider, model, content, toolCalls, finishReason, usage, durationMs);
+      String prov = provider != null ? provider : "unknown";
+      String mdl = model != null ? model : "unknown-model";
+      return new ChatResponse(prov, mdl, content, toolCalls, finishReason, usage, durationMs);
     }
   }
 }

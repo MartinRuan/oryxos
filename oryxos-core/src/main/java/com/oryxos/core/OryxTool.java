@@ -1,5 +1,7 @@
 package com.oryxos.core;
 
+import com.oryxos.core.model.ToolResult;
+
 /**
  * OryxTool 核心抽象接口契约.
  *
@@ -28,5 +30,15 @@ public interface OryxTool {
    */
   default String getInputSchema() {
     return "{}";
+  }
+
+  /**
+   * 执行工具逻辑.
+   *
+   * @param inputJson 入参 JSON 字符串
+   * @return 执行结果实体
+   */
+  default ToolResult execute(String inputJson) {
+    return ToolResult.success("Executed " + getName());
   }
 }

@@ -382,4 +382,82 @@ public class Profile implements Serializable {
       this.maxHistoryTurns = maxHistoryTurns;
     }
   }
+
+  /**
+   * 创建 Profile Builder.
+   *
+   * @return Builder 实例
+   */
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  /** Profile Builder. */
+  public static final class Builder {
+    private final Profile profile = new Profile();
+
+    public Builder name(String name) {
+      profile.setName(name);
+      return this;
+    }
+
+    public Builder description(String description) {
+      profile.setDescription(description);
+      return this;
+    }
+
+    public Builder identity(Identity identity) {
+      profile.setIdentity(identity);
+      return this;
+    }
+
+    public Builder provider(ProviderConfig provider) {
+      profile.setProvider(provider);
+      return this;
+    }
+
+    public Builder tools(List<String> tools) {
+      profile.setTools(tools);
+      return this;
+    }
+
+    public Builder skills(List<String> skills) {
+      profile.setSkills(skills);
+      return this;
+    }
+
+    public Builder mcpServers(List<String> mcpServers) {
+      profile.setMcpServers(mcpServers);
+      return this;
+    }
+
+    public Builder channels(List<ChannelConfig> channels) {
+      profile.setChannels(channels);
+      return this;
+    }
+
+    public Builder notifyChannels(List<String> notifyChannels) {
+      profile.setNotifyChannels(notifyChannels);
+      return this;
+    }
+
+    public Builder schedules(List<ScheduleConfig> schedules) {
+      profile.setSchedules(schedules);
+      return this;
+    }
+
+    public Builder bootstrap(List<String> bootstrap) {
+      profile.setBootstrap(bootstrap);
+      return this;
+    }
+
+    public Builder settings(Settings settings) {
+      profile.setSettings(settings);
+      return this;
+    }
+
+    public Profile build() {
+      return profile;
+    }
+  }
 }
