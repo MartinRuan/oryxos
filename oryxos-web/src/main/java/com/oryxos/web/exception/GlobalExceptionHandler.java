@@ -1,8 +1,8 @@
 package com.oryxos.web.exception;
 
+import com.oryxos.core.exception.OryxException;
+import com.oryxos.core.exception.StandardErrorCode;
 import com.oryxos.web.common.ApiResponse;
-import com.oryxos.web.common.OryxException;
-import com.oryxos.web.common.StandardErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -70,11 +70,13 @@ public class GlobalExceptionHandler {
       }
     }
     String errorMsg =
-        message.isEmpty() ? StandardErrorCode.BAD_REQUEST.getMessage() : message.toString().trim();
+        message.isEmpty()
+            ? StandardErrorCode.INVALID_PARAMETER.getMessage()
+            : message.toString().trim();
     if (log.isWarnEnabled()) {
       log.warn("Validation error: {}", sanitize(errorMsg));
     }
-    return ApiResponse.fail(StandardErrorCode.BAD_REQUEST, errorMsg);
+    return ApiResponse.fail(StandardErrorCode.INVALID_PARAMETER, errorMsg);
   }
 
   /**
@@ -89,7 +91,7 @@ public class GlobalExceptionHandler {
     if (log.isWarnEnabled()) {
       log.warn("Illegal argument: {}", sanitize(ex.getMessage()));
     }
-    return ApiResponse.fail(StandardErrorCode.BAD_REQUEST, ex.getMessage());
+    return ApiResponse.fail(StandardErrorCode.INVALID_PARAMETER, ex.getMessage());
   }
 
   /**
@@ -132,7 +134,7 @@ public class GlobalExceptionHandler {
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public ApiResponse<Void> handleGenericException(Exception ex) {
     log.error("Unhandled server exception", ex);
-    return ApiResponse.fail(StandardErrorCode.INTERNAL_SERVER_ERROR, "Internal server error");
+    return ApiResponse.fail(StandardErrorCode.INTERNAL_ERROR, "Internal server error");
   }
 
   /**

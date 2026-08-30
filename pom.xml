@@ -268,6 +268,7 @@
           <artifactId>spotless-maven-plugin</artifactId>
           <version>${spotless.version}</version>
           <configuration>
+            <lineEndings>UNIX</lineEndings>
             <java>
               <googleJavaFormat>
                 <version>${google-java-format.version}</version>

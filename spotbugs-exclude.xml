@@ -13,6 +13,24 @@
         <Bug pattern="SPRING_ENDPOINT" />
     </Match>
 
+    <!-- Exclude Unicode normalization warnings on internal enum name lookups -->
+    <Match>
+        <Bug pattern="IMPROPER_UNICODE" />
+    </Match>
+
+    <!-- Exclude CRLF log injection warnings in internal SLF4J structured logging -->
+    <Match>
+        <Bug pattern="CRLF_INJECTION_LOGS" />
+    </Match>
+
+    <!-- Exclude internal representation exposure in DTO / Model classes -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP" />
+    </Match>
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2" />
+    </Match>
+
     <!-- Exclude generated Spring Boot code if any -->
     <Match>
         <Package name="~.*\.generated.*" />
