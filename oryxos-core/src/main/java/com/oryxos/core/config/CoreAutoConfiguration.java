@@ -90,4 +90,22 @@ public class CoreAutoConfiguration {
       ProviderService providerService, PromptBuilder promptBuilder, ToolExecutor toolExecutor) {
     return new ReActLoopImpl(providerService, promptBuilder, toolExecutor);
   }
+
+  /**
+   * 启动时自动扫描工作区中的 Agent 与 Profile 并注册到 ProfileRegistry.
+   *
+   * @param profileLoader Profile 加载器
+   * @return ApplicationRunner 启动执行器
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "profileAutoLoader")
+  public org.springframework.boot.ApplicationRunner profileAutoLoader(
+      com.oryxos.core.profile.ProfileLoader profileLoader) {
+    return args -> {
+      profileLoader.loadProfiles(java.nio.file.Path.of(".oryxos", "agents"));
+      profileLoader.loadProfiles(java.nio.file.Path.of(".oryxos", "profiles"));
+      profileLoader.loadProfiles(java.nio.file.Path.of("agents"));
+      profileLoader.loadProfiles(java.nio.file.Path.of("profiles"));
+    };
+  }
 }

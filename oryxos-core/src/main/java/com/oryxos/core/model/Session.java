@@ -25,6 +25,7 @@ public class Session implements Serializable {
   private String status;
   private LocalDateTime createdAt;
   private LocalDateTime lastActiveAt;
+  private LocalDateTime archivedAt;
 
   /** 默认无参构造器. */
   public Session() {
@@ -181,6 +182,14 @@ public class Session implements Serializable {
 
   public void setLastActiveAt(LocalDateTime lastActiveAt) {
     this.lastActiveAt = lastActiveAt;
+  }
+
+  public LocalDateTime getArchivedAt() {
+    return archivedAt;
+  }
+
+  public void setArchivedAt(LocalDateTime archivedAt) {
+    this.archivedAt = archivedAt;
   }
 
   @Override

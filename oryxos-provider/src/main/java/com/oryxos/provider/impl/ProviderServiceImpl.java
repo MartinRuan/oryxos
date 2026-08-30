@@ -88,6 +88,38 @@ public class ProviderServiceImpl implements ProviderService {
     String providerName = profile.getProviderName();
     String modelName = profile.getModelName();
 
+    boolean hasCustomConfig =
+        (profile.getProvider().getBaseUrl() != null
+                && !profile.getProvider().getBaseUrl().isBlank())
+            || (profile.getProvider().getApiKey() != null
+                && !profile.getProvider().getApiKey().isBlank());
+
+    if (hasCustomConfig) {
+      ProviderDescriptor existing = providerRegistry.getDescriptor(providerName).orElse(null);
+      String apiKey =
+          (profile.getProvider().getApiKey() != null
+                  && !profile.getProvider().getApiKey().isBlank())
+              ? profile.getProvider().getApiKey()
+              : (existing != null ? existing.getApiKey() : null);
+      String baseUrl =
+          (profile.getProvider().getBaseUrl() != null
+                  && !profile.getProvider().getBaseUrl().isBlank())
+              ? profile.getProvider().getBaseUrl()
+              : (existing != null ? existing.getBaseUrl() : null);
+      ProviderDescriptor descriptor =
+          ProviderDescriptor.builder()
+              .name(providerName)
+              .type(existing != null ? existing.getType() : "CLOUD")
+              .defaultModel(
+                  modelName != null
+                      ? modelName
+                      : (existing != null ? existing.getDefaultModel() : null))
+              .apiKey(apiKey)
+              .baseUrl(baseUrl)
+              .build();
+      registerProvider(descriptor);
+    }
+
     ChatRequest.Builder builder =
         prompt != null ? ChatRequest.builder(prompt) : ChatRequest.builder();
     builder.sessionId(sessionId);
