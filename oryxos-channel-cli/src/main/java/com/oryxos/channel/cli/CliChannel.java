@@ -55,29 +55,37 @@ public class CliChannel {
   }
 
   /**
-   * 使用指定的输入输出流启动交互式对话循环.
+   * 使用指定的输入输出流启动交互式对话循环（使用自动解析的控制台字符集）.
    *
    * @param profileName 绑定的 Profile 名称
    * @param in 输入流
    * @param out 输出流
    */
   public void run(String profileName, InputStream in, PrintStream out) {
+    run(profileName, in, out, resolveConsoleCharset());
+  }
+
+  /**
+   * 使用指定的输入输出流与字符集启动交互式对话循环.
+   *
+   * @param profileName 绑定的 Profile 名称
+   * @param in 输入流
+   * @param out 输出流
+   * @param charset 输入流解码所使用的字符编码
+   */
+  public void run(String profileName, InputStream in, PrintStream out, Charset charset) {
     Objects.requireNonNull(profileName, "profileName must not be null");
     Objects.requireNonNull(in, "in must not be null");
     Objects.requireNonNull(out, "out must not be null");
 
+    Charset actualCharset = charset != null ? charset : resolveConsoleCharset();
     String currentUser = System.getProperty("user.name", "default");
     Session session = sessionManager.getOrCreate(CHANNEL_NAME, currentUser, profileName);
     log.info("CliChannel started with session [{}] for profile [{}]", session.getId(), profileName);
-
-    // 优先从 oryxos.console.charset 系统属性获取控制台实际编码
-    // 该属性由 oryxos.ps1 从 PowerShell 的 [Console]::InputEncoding 探测后传入
-    // PowerShell 7 默认 UTF-8，PowerShell 5 中文版默认 GB2312/GBK
-    Charset consoleCharset = resolveConsoleCharset();
-    log.info("CliChannel input charset: {}", consoleCharset.name());
+    log.info("CliChannel input charset: {}", actualCharset.name());
 
     try {
-      BufferedReader reader = new BufferedReader(new InputStreamReader(in, consoleCharset));
+      BufferedReader reader = new BufferedReader(new InputStreamReader(in, actualCharset));
 
       while (true) {
         out.print("> ");

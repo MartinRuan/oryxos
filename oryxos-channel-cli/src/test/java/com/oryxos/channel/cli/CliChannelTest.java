@@ -53,7 +53,7 @@ class CliChannelTest {
     when(agentService.process(any(Session.class), eq("你好"))).thenReturn("你好！我是 OryxOS 智能助手。");
     when(agentService.process(any(Session.class), eq("今天天气如何"))).thenReturn("今天晴空万里，温度 22 度。");
 
-    cliChannel.run("weather-agent", in, out);
+    cliChannel.run("weather-agent", in, out, StandardCharsets.UTF_8);
 
     verify(agentService, times(1)).process(any(Session.class), eq("你好"));
     verify(agentService, times(1)).process(any(Session.class), eq("今天天气如何"));
@@ -71,7 +71,7 @@ class CliChannelTest {
     ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(outContent, true, StandardCharsets.UTF_8);
 
-    cliChannel.run("default", in, out);
+    cliChannel.run("default", in, out, StandardCharsets.UTF_8);
 
     verify(agentService, times(0)).process(any(Session.class), any());
   }

@@ -29,6 +29,10 @@ public final class ChatModelFactory {
   private static final String PROVIDER_NAME_DASHSCOPE = "dashscope";
   private static final String DEFAULT_MOCK_KEY = "mock-key";
   private static final String DEFAULT_QWEN_MODEL = "qwen-plus";
+  private static final String PATH_V1_TRAILING_SLASH = "/v1/";
+  private static final String PATH_V1 = "/v1";
+  private static final String DASHSCOPE_KEYWORD = "dashscope";
+  private static final String DEFAULT_BASE_URL_LABEL = "default";
 
   private ChatModelFactory() {
     // Utility class
@@ -64,15 +68,8 @@ public final class ChatModelFactory {
             : DEFAULT_QWEN_MODEL;
 
     // 通义千问 / DashScope 原生协议
-    if ((PROVIDER_NAME_QWEN.equalsIgnoreCase(providerName)
-            || PROVIDER_NAME_DASHSCOPE.equalsIgnoreCase(providerName))
-        && (baseUrl == null || baseUrl.isBlank() || baseUrl.contains("dashscope"))) {
-      DashScopeApi dashScopeApi;
-      if (baseUrl != null && !baseUrl.isBlank()) {
-        dashScopeApi = new DashScopeApi(apiKey, baseUrl);
-      } else {
-        dashScopeApi = new DashScopeApi(apiKey);
-      }
+    if (isDashScopeProvider(providerName, baseUrl)) {
+      DashScopeApi dashScopeApi = createDashScopeApi(apiKey, baseUrl);
       DashScopeChatOptions options = DashScopeChatOptions.builder().withModel(defaultModel).build();
       log.info(
           "Creating DashScope ChatModel for provider: {}, model: {}", providerName, defaultModel);
@@ -80,26 +77,50 @@ public final class ChatModelFactory {
     }
 
     // Kimi / DeepSeek / Ollama / OpenAI 及其他 OpenAI 兼容协议
-    OpenAiApi openAiApi;
-    if (baseUrl != null && !baseUrl.isBlank()) {
-      String normalizedBaseUrl = baseUrl.trim();
-      // Spring AI OpenAiApi 默认 completionsPath 为 "/v1/chat/completions"
-      // 若用户传入的 baseUrl 以 /v1 或 /v1/ 结尾，则剥离末尾 /v1 以免拼接出重复的 /v1/v1/chat/completions (导致 404)
-      if (normalizedBaseUrl.endsWith("/v1/")) {
-        normalizedBaseUrl = normalizedBaseUrl.substring(0, normalizedBaseUrl.length() - 4);
-      } else if (normalizedBaseUrl.endsWith("/v1")) {
-        normalizedBaseUrl = normalizedBaseUrl.substring(0, normalizedBaseUrl.length() - 3);
-      }
-      openAiApi = new OpenAiApi(normalizedBaseUrl, apiKey);
-    } else {
-      openAiApi = new OpenAiApi(apiKey);
-    }
+    OpenAiApi openAiApi = createOpenAiApi(apiKey, baseUrl);
     OpenAiChatOptions openAiOptions = OpenAiChatOptions.builder().withModel(defaultModel).build();
     log.info(
         "Creating OpenAI-compatible ChatModel for provider: {}, model: {}, baseUrl: {}",
         providerName,
         defaultModel,
-        baseUrl != null ? baseUrl : "default");
+        baseUrl != null ? baseUrl : DEFAULT_BASE_URL_LABEL);
     return new OpenAiChatModel(openAiApi, openAiOptions);
+  }
+
+  private static boolean isDashScopeProvider(String providerName, String baseUrl) {
+    boolean isQwenOrDashScope =
+        PROVIDER_NAME_QWEN.equalsIgnoreCase(providerName)
+            || PROVIDER_NAME_DASHSCOPE.equalsIgnoreCase(providerName);
+    if (!isQwenOrDashScope) {
+      return false;
+    }
+    return baseUrl == null || baseUrl.isBlank() || baseUrl.contains(DASHSCOPE_KEYWORD);
+  }
+
+  private static DashScopeApi createDashScopeApi(String apiKey, String baseUrl) {
+    if (baseUrl != null && !baseUrl.isBlank()) {
+      return new DashScopeApi(apiKey, baseUrl);
+    }
+    return new DashScopeApi(apiKey);
+  }
+
+  private static OpenAiApi createOpenAiApi(String apiKey, String baseUrl) {
+    if (baseUrl == null || baseUrl.isBlank()) {
+      return new OpenAiApi(apiKey);
+    }
+    String normalizedBaseUrl = normalizeBaseUrl(baseUrl.trim());
+    return new OpenAiApi(normalizedBaseUrl, apiKey);
+  }
+
+  private static String normalizeBaseUrl(String url) {
+    // Spring AI OpenAiApi 默认 completionsPath 为 "/v1/chat/completions"
+    // 若用户传入的 baseUrl 以 /v1 或 /v1/ 结尾，则剥离末尾 /v1 以免拼接出重复的 /v1/v1/chat/completions (导致 404)
+    if (url.endsWith(PATH_V1_TRAILING_SLASH)) {
+      return url.substring(0, url.length() - PATH_V1_TRAILING_SLASH.length());
+    }
+    if (url.endsWith(PATH_V1)) {
+      return url.substring(0, url.length() - PATH_V1.length());
+    }
+    return url;
   }
 }
