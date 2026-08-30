@@ -1,9 +1,9 @@
-package com.oryxos.web.common;
+package com.oryxos.core.exception;
 
 /**
- * OryxOS 基础业务异常.
+ * OryxOS 统一业务与运行时异常基类.
  *
- * @author OryxOS Team
+ * @author oryxos
  */
 public class OryxException extends RuntimeException {
 
@@ -14,33 +14,36 @@ public class OryxException extends RuntimeException {
   /**
    * 基于错误码构造异常.
    *
-   * @param errorCode 错误码
+   * @param errorCode 错误码契约
    */
   public OryxException(ErrorCode errorCode) {
-    super(errorCode.getMessage());
+    super(errorCode != null ? errorCode.getMessage() : "Unknown error");
     this.errorCode = errorCode;
   }
 
   /**
    * 基于错误码与自定义描述构造异常.
    *
-   * @param errorCode 错误码
+   * @param errorCode 错误码契约
    * @param customMessage 自定义错误描述
    */
   public OryxException(ErrorCode errorCode, String customMessage) {
-    super(customMessage);
+    super(
+        customMessage != null ? customMessage : (errorCode != null ? errorCode.getMessage() : ""));
     this.errorCode = errorCode;
   }
 
   /**
    * 基于错误码、自定义描述与根因异常构造异常.
    *
-   * @param errorCode 错误码
+   * @param errorCode 错误码契约
    * @param customMessage 自定义错误描述
    * @param cause 异常根因
    */
   public OryxException(ErrorCode errorCode, String customMessage, Throwable cause) {
-    super(customMessage, cause);
+    super(
+        customMessage != null ? customMessage : (errorCode != null ? errorCode.getMessage() : ""),
+        cause);
     this.errorCode = errorCode;
   }
 
@@ -51,5 +54,14 @@ public class OryxException extends RuntimeException {
    */
   public ErrorCode getErrorCode() {
     return errorCode;
+  }
+
+  /**
+   * 获取数字错误码.
+   *
+   * @return 数字错误码
+   */
+  public int getCode() {
+    return errorCode != null ? errorCode.getCode() : 50000;
   }
 }

@@ -23,5 +23,15 @@
       <groupId>com.alibaba.cloud.ai</groupId>
       <artifactId>spring-ai-alibaba-starter</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.oryxos</groupId>
+      <artifactId>oryxos-storage</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

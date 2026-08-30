@@ -1,9 +1,9 @@
-package com.oryxos.web.common;
+package com.oryxos.core.exception;
 
 /**
  * 统一错误码契约接口.
  *
- * @author OryxOS Team
+ * @author oryxos
  */
 public interface ErrorCode {
 

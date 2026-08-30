@@ -1,5 +1,7 @@
 package com.oryxos.web.common;
 
+import com.oryxos.core.exception.ErrorCode;
+import com.oryxos.core.exception.StandardErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 

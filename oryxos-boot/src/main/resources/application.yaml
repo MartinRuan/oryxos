@@ -35,6 +35,49 @@ spring:
       schema-locations: classpath:db/migration/V1__init_schema.sql
       continue-on-error: true
 
+# OryxOS Multi-Provider Configuration (Explicit Mapping)
+oryxos:
+  default-timeout-seconds: 120
+  default-max-retries: 2
+  providers:
+    mock:
+      type: MOCK
+      default-model: mock-model
+      supported-models:
+        - mock-model
+    qwen:
+      type: CLOUD
+      default-model: qwen-plus
+      supported-models:
+        - qwen-plus
+        - qwen-turbo
+        - qwen-max
+      api-key: ${DASHSCOPE_API_KEY:mock-key}
+    deepseek:
+      type: CLOUD
+      default-model: deepseek-chat
+      supported-models:
+        - deepseek-chat
+        - deepseek-reasoner
+      base-url: https://api.deepseek.com/v1
+      api-key: ${DEEPSEEK_API_KEY:mock-key}
+    kimi:
+      type: CLOUD
+      default-model: moonshot-v1-8k
+      supported-models:
+        - moonshot-v1-8k
+        - moonshot-v1-32k
+      base-url: https://api.moonshot.cn/v1
+      api-key: ${MOONSHOT_API_KEY:mock-key}
+    ollama:
+      type: LOCAL
+      default-model: llama3.1
+      supported-models:
+        - llama3.1
+        - qwen2.5-coder
+      base-url: http://localhost:11434/v1
+      api-key: ${OLLAMA_API_KEY:ollama}
+
 # SpringDoc OpenAPI Documentation
 springdoc:
   swagger-ui:

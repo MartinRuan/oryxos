@@ -20,4 +20,13 @@ public interface OryxTool {
    * @return 工具描述
    */
   String getDescription();
+
+  /**
+   * 工具入参的 JSON Schema 描述.
+   *
+   * @return JSON Schema 字符串
+   */
+  default String getInputSchema() {
+    return "{}";
+  }
 }
