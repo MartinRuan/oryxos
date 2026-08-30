@@ -10,7 +10,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  * @author OryxOS Team
  */
-@SpringBootApplication(scanBasePackages = "com.oryxos")
+@SpringBootApplication(
+    scanBasePackages = "com.oryxos",
+    excludeName = {
+      "com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAutoConfiguration",
+      "org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration"
+    })
 public class OryxApplication {
 
   private static final Logger log = LoggerFactory.getLogger(OryxApplication.class);

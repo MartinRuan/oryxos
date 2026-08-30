@@ -5,15 +5,18 @@
 
 -- 1. 会话表 (Sessions)
 CREATE TABLE IF NOT EXISTS sessions (
-    session_id VARCHAR(64) PRIMARY KEY,
+    session_id VARCHAR(128) PRIMARY KEY,
     profile_name VARCHAR(64) NOT NULL,
     channel VARCHAR(32) NOT NULL DEFAULT 'cli',
     user_id VARCHAR(64),
     messages_json TEXT NOT NULL DEFAULT '[]',
     status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_active_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    last_active_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_sessions_profile_name ON sessions(profile_name);
+CREATE INDEX IF NOT EXISTS idx_sessions_channel_user ON sessions(channel, user_id);
 
 -- 2. Tool 调用审计表 (Tool Invocations) - Day One 写入
 CREATE TABLE IF NOT EXISTS tool_invocations (

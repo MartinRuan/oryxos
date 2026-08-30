@@ -31,6 +31,22 @@
         <Bug pattern="EI_EXPOSE_REP2" />
     </Match>
 
+    <!-- Exclude static application context access in launcher -->
+    <Match>
+        <Class name="com.oryxos.cli.launcher.SpringContextLauncher" />
+        <Bug pattern="MS_EXPOSE_REP" />
+    </Match>
+
+    <!-- Exclude CLI command and ProfileRegistry path traversal warnings on local workspace files -->
+    <Match>
+        <Package name="com.oryxos.cli.command" />
+        <Bug pattern="PATH_TRAVERSAL_IN" />
+    </Match>
+    <Match>
+        <Class name="com.oryxos.core.profile.ProfileRegistry" />
+        <Bug pattern="PATH_TRAVERSAL_IN" />
+    </Match>
+
     <!-- Exclude generated Spring Boot code if any -->
     <Match>
         <Package name="~.*\.generated.*" />

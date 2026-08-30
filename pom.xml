@@ -104,6 +104,13 @@
         <version>${spring-ai-alibaba.version}</version>
       </dependency>
 
+      <!-- Spring AI OpenAI Compatibility -->
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-openai</artifactId>
+        <version>1.0.0-M2</version>
+      </dependency>
+
       <!-- Internal Submodules -->
       <dependency>
         <groupId>com.oryxos</groupId>

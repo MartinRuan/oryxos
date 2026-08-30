@@ -70,12 +70,12 @@ public class ProfileLoader {
    */
   public List<Profile> loadProfiles(Path profilesDir, Set<String> availableProviders) {
     if (profilesDir == null || !Files.exists(profilesDir)) {
-      log.info("Profile directory not found: {}", profilesDir);
+      log.debug("Profile directory not found: {}", profilesDir);
       return Collections.emptyList();
     }
 
     List<Profile> loaded = new ArrayList<>();
-    try (Stream<Path> stream = Files.walk(profilesDir, 2)) {
+    try (Stream<Path> stream = Files.walk(profilesDir, 4)) {
       stream
           .filter(Files::isRegularFile)
           .filter(
@@ -337,7 +337,7 @@ public class ProfileLoader {
   }
 
   /** 从 AGENT.md 中提取 frontmatter YAML 内容. */
-  private String extractFrontmatter(String content) {
+  public String extractFrontmatter(String content) {
     if (content.startsWith(FRONTMATTER_DELIMITER)) {
       int second = content.indexOf(FRONTMATTER_DELIMITER, FRONTMATTER_DELIMITER_LENGTH);
       if (second > FRONTMATTER_DELIMITER_LENGTH) {
