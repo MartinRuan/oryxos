@@ -42,6 +42,10 @@ public class ToolResult implements Serializable {
     return new ToolResult(true, content, null, false);
   }
 
+  public boolean success() {
+    return success;
+  }
+
   /**
    * 创建失败结果实例（默认不可重试）.
    *
@@ -71,11 +75,23 @@ public class ToolResult implements Serializable {
     return content;
   }
 
+  public String content() {
+    return content;
+  }
+
   public String getErrorMessage() {
     return errorMessage;
   }
 
+  public String errorMessage() {
+    return errorMessage;
+  }
+
   public boolean isRetryable() {
+    return retryable;
+  }
+
+  public boolean retryable() {
     return retryable;
   }
 

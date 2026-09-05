@@ -15,6 +15,12 @@ import java.util.Map;
 public class Profile implements Serializable {
 
   private static final long serialVersionUID = 1L;
+  private static final String CHANNEL_DINGTALK = "dingtalk";
+  private static final String CHANNEL_FEISHU = "feishu";
+  private static final String CHANNEL_WECOM = "wecom";
+  private static final String KEYWORD_DINGTALK = "钉钉";
+  private static final String KEYWORD_FEISHU = "飞书";
+  private static final String KEYWORD_WECOM = "企微";
 
   private String name;
   private String description;
@@ -126,13 +132,7 @@ public class Profile implements Serializable {
     for (NotifyChannelConfig channelConfig : notifyChannels) {
       String cfgName = channelConfig.getName();
       String cfgType = channelConfig.getType();
-      if (target.equalsIgnoreCase(cfgName)
-          || target.equalsIgnoreCase(cfgType)
-          || (cfgName != null
-              && target.toLowerCase(Locale.ROOT).contains(cfgName.toLowerCase(Locale.ROOT)))
-          || (target.contains("钉钉") && "dingtalk".equalsIgnoreCase(cfgType))
-          || (target.contains("飞书") && "feishu".equalsIgnoreCase(cfgType))
-          || (target.contains("企微") && "wecom".equalsIgnoreCase(cfgType))) {
+      if (matchesChannel(target, cfgName, cfgType)) {
         return channelConfig;
       }
     }
@@ -142,6 +142,27 @@ public class Profile implements Serializable {
     throw new com.oryxos.core.exception.OryxException(
         com.oryxos.core.exception.StandardErrorCode.NOT_FOUND,
         String.format("Notify channel [%s] not found in profile: %s", channelName, name));
+  }
+
+  private boolean matchesChannel(String target, String cfgName, String cfgType) {
+    if (target.equalsIgnoreCase(cfgName) || target.equalsIgnoreCase(cfgType)) {
+      return true;
+    }
+    if (cfgName != null
+        && target.toLowerCase(Locale.ROOT).contains(cfgName.toLowerCase(Locale.ROOT))) {
+      return true;
+    }
+    return isKeywordMatch(target, cfgType);
+  }
+
+  private boolean isKeywordMatch(String target, String cfgType) {
+    if (target.contains(KEYWORD_DINGTALK) && CHANNEL_DINGTALK.equalsIgnoreCase(cfgType)) {
+      return true;
+    }
+    if (target.contains(KEYWORD_FEISHU) && CHANNEL_FEISHU.equalsIgnoreCase(cfgType)) {
+      return true;
+    }
+    return target.contains(KEYWORD_WECOM) && CHANNEL_WECOM.equalsIgnoreCase(cfgType);
   }
 
   public List<ScheduleConfig> getSchedules() {

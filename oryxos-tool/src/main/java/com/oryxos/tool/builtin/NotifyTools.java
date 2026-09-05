@@ -25,6 +25,8 @@ public class NotifyTools implements OryxTool {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final String FIELD_CONTENT = "content";
+  private static final String FIELD_MESSAGE = "message";
+  private static final String FIELD_TEXT = "text";
   private static final String FIELD_CHANNEL = "channel";
   private static final String CONFIG_KEY_URL = "url";
 
@@ -72,10 +74,10 @@ public class NotifyTools implements OryxTool {
         JsonNode node = OBJECT_MAPPER.readTree(inputJson);
         if (node.has(FIELD_CONTENT)) {
           content = node.get(FIELD_CONTENT).asText();
-        } else if (node.has("message")) {
-          content = node.get("message").asText();
-        } else if (node.has("text")) {
-          content = node.get("text").asText();
+        } else if (node.has(FIELD_MESSAGE)) {
+          content = node.get(FIELD_MESSAGE).asText();
+        } else if (node.has(FIELD_TEXT)) {
+          content = node.get(FIELD_TEXT).asText();
         }
         if (node.has(FIELD_CHANNEL)) {
           channel = node.get(FIELD_CHANNEL).asText();
