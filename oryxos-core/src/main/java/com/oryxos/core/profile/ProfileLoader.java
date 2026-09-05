@@ -39,6 +39,7 @@ public class ProfileLoader {
   private static final String ENV_PREFIX = "${";
   private static final String ENV_SUFFIX = "}";
   private static final int ENV_PREFIX_LENGTH = 2;
+  private static final int MIN_QUOTED_LENGTH = 2;
   private static final char COLON = ':';
 
   private final ProfileRegistry profileRegistry;
@@ -364,12 +365,7 @@ public class ProfileLoader {
                 int eq = s.indexOf('=');
                 String k = s.substring(0, eq).trim();
                 String v = s.substring(eq + 1).trim();
-                if ((v.startsWith("\"") && v.endsWith("\""))
-                    || (v.startsWith("'") && v.endsWith("'"))) {
-                  if (v.length() >= 2) {
-                    v = v.substring(1, v.length() - 1);
-                  }
-                }
+                v = stripQuotes(v);
                 DOT_ENV_CACHE.putIfAbsent(k, v);
                 String existingProp = System.getProperty(k);
                 if (existingProp == null || existingProp.isBlank()) {
@@ -470,5 +466,16 @@ public class ProfileLoader {
       }
     }
     return Collections.emptyList();
+  }
+
+  private static String stripQuotes(String v) {
+    if (v != null && v.length() >= MIN_QUOTED_LENGTH) {
+      boolean doubleQuoted = v.startsWith("\"") && v.endsWith("\"");
+      boolean singleQuoted = v.startsWith("'") && v.endsWith("'");
+      if (doubleQuoted || singleQuoted) {
+        return v.substring(1, v.length() - 1);
+      }
+    }
+    return v;
   }
 }
