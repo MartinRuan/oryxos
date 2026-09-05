@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -123,10 +124,20 @@ public class Profile implements Serializable {
     }
     String target = channelName.trim();
     for (NotifyChannelConfig channelConfig : notifyChannels) {
-      if (target.equalsIgnoreCase(channelConfig.getName())
-          || target.equalsIgnoreCase(channelConfig.getType())) {
+      String cfgName = channelConfig.getName();
+      String cfgType = channelConfig.getType();
+      if (target.equalsIgnoreCase(cfgName)
+          || target.equalsIgnoreCase(cfgType)
+          || (cfgName != null
+              && target.toLowerCase(Locale.ROOT).contains(cfgName.toLowerCase(Locale.ROOT)))
+          || (target.contains("钉钉") && "dingtalk".equalsIgnoreCase(cfgType))
+          || (target.contains("飞书") && "feishu".equalsIgnoreCase(cfgType))
+          || (target.contains("企微") && "wecom".equalsIgnoreCase(cfgType))) {
         return channelConfig;
       }
+    }
+    if (notifyChannels.size() == 1) {
+      return notifyChannels.get(0);
     }
     throw new com.oryxos.core.exception.OryxException(
         com.oryxos.core.exception.StandardErrorCode.NOT_FOUND,

@@ -72,6 +72,10 @@ public class NotifyTools implements OryxTool {
         JsonNode node = OBJECT_MAPPER.readTree(inputJson);
         if (node.has(FIELD_CONTENT)) {
           content = node.get(FIELD_CONTENT).asText();
+        } else if (node.has("message")) {
+          content = node.get("message").asText();
+        } else if (node.has("text")) {
+          content = node.get("text").asText();
         }
         if (node.has(FIELD_CHANNEL)) {
           channel = node.get(FIELD_CHANNEL).asText();

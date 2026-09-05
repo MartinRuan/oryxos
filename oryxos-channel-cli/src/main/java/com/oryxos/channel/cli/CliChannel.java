@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -126,7 +127,7 @@ public class CliChannel {
 
         try {
           String reply = agentService.process(session, trimmed);
-          out.println(reply);
+          out.println(sanitizeForConsole(reply, actualCharset));
           out.flush();
         } catch (Exception e) {
           log.error("Error processing user input in CLI session [{}]", session.getId(), e);
@@ -226,5 +227,34 @@ public class CliChannel {
     Charset fallback = Charset.defaultCharset();
     log.debug("No oryxos.console.charset set, using JVM default charset: {}", fallback.name());
     return fallback;
+  }
+
+  /**
+   * 过滤控制台无法编码的特殊字符（如 4 字节 Emoji 在 GBK 代码页下会自动降级为问号 '?'）.
+   *
+   * @param text 待输出给控制台的文本
+   * @param charset 控制台输出字符编码
+   * @return 过滤不可映射字符后的整洁文本
+   */
+  private static String sanitizeForConsole(String text, Charset charset) {
+    if (text == null
+        || text.isEmpty()
+        || charset == null
+        || StandardCharsets.UTF_8.equals(charset)) {
+      return text;
+    }
+    CharsetEncoder encoder = charset.newEncoder();
+    StringBuilder sb = new StringBuilder(text.length());
+    int i = 0;
+    while (i < text.length()) {
+      int codePoint = text.codePointAt(i);
+      int charCount = Character.charCount(codePoint);
+      String s = text.substring(i, i + charCount);
+      if (encoder.canEncode(s)) {
+        sb.append(s);
+      }
+      i += charCount;
+    }
+    return sb.toString();
   }
 }

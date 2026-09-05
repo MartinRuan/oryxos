@@ -6,9 +6,12 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.oryxos.core.model.ProviderDescriptor;
 import com.oryxos.provider.mock.MockChatModel;
 import java.util.Locale;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
@@ -73,7 +76,7 @@ public final class ChatModelFactory {
       DashScopeChatOptions options = DashScopeChatOptions.builder().withModel(defaultModel).build();
       log.info(
           "Creating DashScope ChatModel for provider: {}, model: {}", providerName, defaultModel);
-      return new DashScopeChatModel(dashScopeApi, options);
+      return new OryxDashScopeChatModel(dashScopeApi, options);
     }
 
     // Kimi / DeepSeek / Ollama / OpenAI 及其他 OpenAI 兼容协议
@@ -84,7 +87,7 @@ public final class ChatModelFactory {
         providerName,
         defaultModel,
         baseUrl != null ? baseUrl : DEFAULT_BASE_URL_LABEL);
-    return new OpenAiChatModel(openAiApi, openAiOptions);
+    return new OryxOpenAiChatModel(openAiApi, openAiOptions);
   }
 
   private static boolean isDashScopeProvider(String providerName, String baseUrl) {
@@ -122,5 +125,44 @@ public final class ChatModelFactory {
       return url.substring(0, url.length() - PATH_V1.length());
     }
     return url;
+  }
+
+  /**
+   * OryxOS 扩展的 OpenAiChatModel. 重写 isToolCall 返回 false，彻底阻止 Spring AI 内部工具调用循环， 严格贯彻 Constitution
+   * 原则二（由 ReActLoop + ToolExecutor 接管调度与执行）.
+   */
+  public static class OryxOpenAiChatModel extends OpenAiChatModel {
+
+    public OryxOpenAiChatModel(OpenAiApi openAiApi, OpenAiChatOptions defaultOptions) {
+      super(openAiApi, defaultOptions);
+    }
+
+    @Override
+    protected boolean isToolCall(ChatResponse chatResponse, Set<String> toolNames) {
+      return false;
+    }
+
+    @Override
+    protected boolean isToolCall(Generation generation, Set<String> toolNames) {
+      return false;
+    }
+  }
+
+  /** OryxOS 扩展的 DashScopeChatModel. 重写 isToolCall 返回 false，彻底阻止 Spring AI 内部工具调用循环. */
+  public static class OryxDashScopeChatModel extends DashScopeChatModel {
+
+    public OryxDashScopeChatModel(DashScopeApi dashScopeApi, DashScopeChatOptions defaultOptions) {
+      super(dashScopeApi, defaultOptions);
+    }
+
+    @Override
+    protected boolean isToolCall(ChatResponse chatResponse, Set<String> toolNames) {
+      return false;
+    }
+
+    @Override
+    protected boolean isToolCall(Generation generation, Set<String> toolNames) {
+      return false;
+    }
   }
 }

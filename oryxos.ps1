@@ -22,6 +22,7 @@ $EnvCandidates = @(
     Join-Path $RootDir ".env",
     Join-Path $RootDir ".oryxos\.env"
 )
+$LoadedEnvVars = @{}
 foreach ($envPath in $EnvCandidates) {
     if (Test-Path $envPath) {
         Get-Content $envPath -Encoding UTF8 | ForEach-Object {
@@ -30,9 +31,11 @@ foreach ($envPath in $EnvCandidates) {
                 $idx = $s.IndexOf("=")
                 $varName = $s.Substring(0, $idx).Trim()
                 $varVal = $s.Substring($idx + 1).Trim().Trim('"').Trim("'")
-                if (-not (Test-Path "env:$varName")) {
-                    Set-Item -Path "env:$varName" -Value $varVal
+                $currentVal = [System.Environment]::GetEnvironmentVariable($varName, [System.EnvironmentVariableTarget]::Process)
+                if ([string]::IsNullOrWhiteSpace($currentVal)) {
+                    [System.Environment]::SetEnvironmentVariable($varName, $varVal, [System.EnvironmentVariableTarget]::Process)
                 }
+                $LoadedEnvVars[$varName] = $varVal
             }
         }
     }
@@ -62,11 +65,18 @@ $JvmArgs = @(
     "-Dloader.main=com.oryxos.cli.OryxOsCli",
     "-Doryxos.console.charset=$ConsoleCharset"
 )
+foreach ($kv in $LoadedEnvVars.GetEnumerator()) {
+    $JvmArgs += "-D$($kv.Key)=$($kv.Value)"
+}
 
 if (Test-Path $BootJar) {
     & $JavaCmd @JvmArgs -cp $BootJar org.springframework.boot.loader.launch.PropertiesLauncher @CliArgs
 } else {
     $argString = $CliArgs -join ' '
-    $jvmArgString = "-Doryxos.console.charset=$ConsoleCharset"
+    $jvmArgList = @("-Doryxos.console.charset=$ConsoleCharset")
+    foreach ($kv in $LoadedEnvVars.GetEnumerator()) {
+        $jvmArgList += "-D$($kv.Key)=$($kv.Value)"
+    }
+    $jvmArgString = $jvmArgList -join ' '
     & mvn spring-boot:run -pl oryxos-boot "-Dspring-boot.run.main-class=com.oryxos.cli.OryxOsCli" "-Dspring-boot.run.jvmArguments=$jvmArgString" "-Dspring-boot.run.arguments=$argString"
 }
