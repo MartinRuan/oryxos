@@ -7,6 +7,10 @@ provider:
   base_url: https://api.minimaxi.com/v1
   api_key: ${MINIMAX_API_KEY}
   temperature: 0.7
+notify_channels:
+  - name: dingtalk
+    type: dingtalk
+    url: ${DINGTALK_WEBHOOK_URL}
 tools:
   - notify
   - read_file
