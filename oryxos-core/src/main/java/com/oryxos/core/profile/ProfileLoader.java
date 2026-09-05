@@ -168,6 +168,11 @@ public class ProfileLoader {
     populateProvider(profile, map.get("provider"), availableProviders);
     populateLists(profile, map);
     populateChannels(profile, map.get("channels"));
+    populateNotifyChannels(
+        profile,
+        map.get("notify_channels") != null
+            ? map.get("notify_channels")
+            : map.get("notifyChannels"));
     populateSchedules(profile, map.get("schedules"));
     populateSettings(profile, map.get("settings"));
 
@@ -217,8 +222,8 @@ public class ProfileLoader {
     if (temp instanceof Number) {
       providerConfig.setTemperature(((Number) temp).doubleValue());
     }
-    providerConfig.setApiKey(getString(providerMap, "api_key", "apiKey"));
-    providerConfig.setBaseUrl(getString(providerMap, "base_url", "baseUrl"));
+    providerConfig.setApiKey(getString(providerMap, "api_key", "apiKey", "api-key"));
+    providerConfig.setBaseUrl(getString(providerMap, "base_url", "baseUrl", "base-url"));
     profile.setProvider(providerConfig);
   }
 
@@ -227,7 +232,44 @@ public class ProfileLoader {
     profile.setSkills(getStringList(map, "skills"));
     profile.setMcpServers(getStringList(map, "mcp_servers", "mcpServers"));
     profile.setBootstrap(getStringList(map, "bootstrap"));
-    profile.setNotifyChannels(getStringList(map, "notify_channels", "notifyChannels"));
+  }
+
+  @SuppressWarnings("unchecked")
+  private void populateNotifyChannels(Profile profile, Object notifyChannelsObj) {
+    if (notifyChannelsObj instanceof List) {
+      List<?> list = (List<?>) notifyChannelsObj;
+      List<Profile.NotifyChannelConfig> notifyChannels = new ArrayList<>();
+      for (Object item : list) {
+        if (item instanceof Map) {
+          Map<String, Object> channelMap = (Map<String, Object>) item;
+          String name = getString(channelMap, "name");
+          String type = getString(channelMap, "type");
+          if (type == null || type.trim().isEmpty()) {
+            type = "webhook";
+          }
+          if (name == null || name.trim().isEmpty()) {
+            name = type;
+          }
+          Map<String, String> config = new java.util.HashMap<>();
+          for (Map.Entry<String, Object> entry : channelMap.entrySet()) {
+            if (entry.getValue() != null) {
+              config.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
+          }
+          Profile.NotifyChannelConfig channelConfig =
+              new Profile.NotifyChannelConfig(name, type, config);
+          notifyChannels.add(channelConfig);
+        } else if (item instanceof String) {
+          String str = (String) item;
+          Map<String, String> config = new java.util.HashMap<>();
+          config.put("url", str);
+          Profile.NotifyChannelConfig channelConfig =
+              new Profile.NotifyChannelConfig(str, "webhook", config);
+          notifyChannels.add(channelConfig);
+        }
+      }
+      profile.setNotifyChannels(notifyChannels);
+    }
   }
 
   @SuppressWarnings("unchecked")

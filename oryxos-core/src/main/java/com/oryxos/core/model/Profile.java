@@ -23,7 +23,7 @@ public class Profile implements Serializable {
   private List<String> skills = new ArrayList<>();
   private List<String> mcpServers = new ArrayList<>();
   private List<ChannelConfig> channels = new ArrayList<>();
-  private List<String> notifyChannels = new ArrayList<>();
+  private List<NotifyChannelConfig> notifyChannels = new ArrayList<>();
   private List<ScheduleConfig> schedules = new ArrayList<>();
   private List<String> bootstrap = new ArrayList<>();
   private Settings settings = new Settings();
@@ -95,13 +95,42 @@ public class Profile implements Serializable {
     this.channels = channels != null ? new ArrayList<>(channels) : new ArrayList<>();
   }
 
-  public List<String> getNotifyChannels() {
+  public List<NotifyChannelConfig> getNotifyChannels() {
     return notifyChannels != null ? notifyChannels : Collections.emptyList();
   }
 
-  public void setNotifyChannels(List<String> notifyChannels) {
+  public void setNotifyChannels(List<NotifyChannelConfig> notifyChannels) {
     this.notifyChannels =
         notifyChannels != null ? new ArrayList<>(notifyChannels) : new ArrayList<>();
+  }
+
+  /**
+   * 根据渠道名称或类型解析通知渠道配置.
+   *
+   * @param channelName 渠道名称或类型，可为 null/空/default 表示缺省使用首个渠道
+   * @return 匹配的通知渠道配置
+   */
+  public NotifyChannelConfig resolveNotifyChannel(String channelName) {
+    if (notifyChannels == null || notifyChannels.isEmpty()) {
+      throw new com.oryxos.core.exception.OryxException(
+          com.oryxos.core.exception.StandardErrorCode.NOT_FOUND,
+          "No notify channels configured for profile: " + name);
+    }
+    if (channelName == null
+        || channelName.trim().isEmpty()
+        || "default".equalsIgnoreCase(channelName.trim())) {
+      return notifyChannels.get(0);
+    }
+    String target = channelName.trim();
+    for (NotifyChannelConfig channelConfig : notifyChannels) {
+      if (target.equalsIgnoreCase(channelConfig.getName())
+          || target.equalsIgnoreCase(channelConfig.getType())) {
+        return channelConfig;
+      }
+    }
+    throw new com.oryxos.core.exception.OryxException(
+        com.oryxos.core.exception.StandardErrorCode.NOT_FOUND,
+        String.format("Notify channel [%s] not found in profile: %s", channelName, name));
   }
 
   public List<ScheduleConfig> getSchedules() {
@@ -296,6 +325,59 @@ public class Profile implements Serializable {
     }
   }
 
+  /** 通知渠道配置. */
+  public static class NotifyChannelConfig implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private String name;
+    private String type = "webhook";
+    private Map<String, String> config = new java.util.HashMap<>();
+
+    /** 默认无参构造器. */
+    public NotifyChannelConfig() {}
+
+    /**
+     * 构造通知渠道配置.
+     *
+     * @param name 渠道名称
+     * @param type 渠道类型
+     * @param config 渠道配置字典
+     */
+    public NotifyChannelConfig(String name, String type, Map<String, String> config) {
+      this.name = name;
+      this.type = type != null ? type : "webhook";
+      this.config = config != null ? new java.util.HashMap<>(config) : new java.util.HashMap<>();
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public void setName(String name) {
+      this.name = name;
+    }
+
+    public String getType() {
+      return type;
+    }
+
+    public void setType(String type) {
+      this.type = type;
+    }
+
+    public Map<String, String> getConfig() {
+      return config != null ? config : Collections.emptyMap();
+    }
+
+    public void setConfig(Map<String, String> config) {
+      this.config = config != null ? new java.util.HashMap<>(config) : new java.util.HashMap<>();
+    }
+
+    public String getUrl() {
+      return config != null ? config.get("url") : null;
+    }
+  }
+
   /** 调度配置. */
   public static class ScheduleConfig implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -436,7 +518,7 @@ public class Profile implements Serializable {
       return this;
     }
 
-    public Builder notifyChannels(List<String> notifyChannels) {
+    public Builder notifyChannels(List<NotifyChannelConfig> notifyChannels) {
       profile.setNotifyChannels(notifyChannels);
       return this;
     }

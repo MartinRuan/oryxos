@@ -88,7 +88,8 @@ class ProfileLoaderTest {
     assertThat(profile.getTools()).containsExactly("read_file", "shell", "http_get");
     assertThat(profile.getSkills()).containsExactly("git-ops", "log-analysis");
     assertThat(profile.getMcpServers()).containsExactly("github-mcp");
-    assertThat(profile.getNotifyChannels()).containsExactly("ops-feishu-webhook");
+    assertThat(profile.getNotifyChannels()).hasSize(1);
+    assertThat(profile.getNotifyChannels().get(0).getName()).isEqualTo("ops-feishu-webhook");
     assertThat(profile.getBootstrap()).containsExactly("AGENTS.md", "SOUL.md", "USER.md");
 
     // channels & schedules
@@ -191,6 +192,68 @@ class ProfileLoaderTest {
     } finally {
       System.clearProperty("TEST_LLM_API_KEY");
       System.clearProperty("TEST_LLM_MODEL");
+    }
+  }
+
+  @Test
+  @DisplayName("结构化 notify_channels 解析与渠道解析解析逻辑")
+  void 结构化notify_channels解析与解析() {
+    System.setProperty("TEAM_WEBHOOK_URL", "https://oapi.feishu.cn/open-apis/bot/v2/hook/xyz");
+    try {
+      String yaml =
+          """
+          name: notify-agent
+          provider:
+            name: deepseek
+            model: deepseek-chat
+          notify_channels:
+            - name: team-hook
+              type: webhook
+              url: ${TEAM_WEBHOOK_URL}
+            - name: alert-hook
+              type: webhook
+              url: https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc
+          """;
+
+      Profile profile = loader.parse(yaml);
+      assertThat(profile.getNotifyChannels()).hasSize(2);
+
+      Profile.NotifyChannelConfig first = profile.resolveNotifyChannel(null);
+      assertThat(first.getName()).isEqualTo("team-hook");
+      assertThat(first.getType()).isEqualTo("webhook");
+      assertThat(first.getUrl()).isEqualTo("https://oapi.feishu.cn/open-apis/bot/v2/hook/xyz");
+
+      Profile.NotifyChannelConfig alert = profile.resolveNotifyChannel("alert-hook");
+      assertThat(alert.getName()).isEqualTo("alert-hook");
+      assertThat(alert.getUrl()).contains("key=abc");
+    } finally {
+      System.clearProperty("TEAM_WEBHOOK_URL");
+    }
+  }
+
+  @Test
+  @DisplayName("支持 MiniMax 提供商配置以及 kebab-case 属性名解析")
+  void minimaxAgentProvider解析_包含kebabCase支持() {
+    System.setProperty("MINIMAX_API_KEY", "sk-minimax-test-key");
+    try {
+      String yaml =
+          """
+          name: minimax-agent
+          provider:
+            name: minimax
+            model: MiniMax-M2.7
+            base-url: https://api.minimaxi.com/v1
+            api-key: ${MINIMAX_API_KEY}
+          """;
+
+      Profile profile = loader.parse(yaml);
+      assertThat(profile.getName()).isEqualTo("minimax-agent");
+      assertThat(profile.getProviderName()).isEqualTo("minimax");
+      assertThat(profile.getModelName()).isEqualTo("MiniMax-M2.7");
+      assertThat(profile.getProvider().getBaseUrl()).isEqualTo("https://api.minimaxi.com/v1");
+      assertThat(profile.getProvider().getApiKey()).isEqualTo("sk-minimax-test-key");
+    } finally {
+      System.clearProperty("MINIMAX_API_KEY");
     }
   }
 }

@@ -1,6 +1,9 @@
 package com.oryxos.core.context;
 
+import com.oryxos.core.exception.OryxException;
+import com.oryxos.core.exception.StandardErrorCode;
 import com.oryxos.core.model.Profile;
+import org.springframework.stereotype.Component;
 
 /**
  * 线程隔离的 Agent Profile 上下文容器. 解决无 Profile 入参的工具在执行期间按需获取当前 Agent 配置的诉求.
@@ -9,13 +12,13 @@ import com.oryxos.core.model.Profile;
  *
  * @author oryxos
  */
-public final class ProfileContext {
+@Component
+public class ProfileContext {
 
   private static final ThreadLocal<Profile> CURRENT_PROFILE = new ThreadLocal<>();
 
-  private ProfileContext() {
-    // 工具类禁止实例化
-  }
+  /** 默认构造器，支持 Spring 依赖注入. */
+  public ProfileContext() {}
 
   /**
    * 将指定 Profile 绑定至当前线程上下文.
@@ -47,5 +50,20 @@ public final class ProfileContext {
   /** 清理当前线程绑定的 Profile 上下文，防止内存泄漏或线程复用串号. */
   public static void clear() {
     CURRENT_PROFILE.remove();
+  }
+
+  /**
+   * 从当前绑定的 Profile 中解析指定的通知渠道配置.
+   *
+   * @param channel 渠道名称或类型（可为空/default，缺省取首个配置）
+   * @return 通知渠道配置 NotifyChannelConfig
+   */
+  public Profile.NotifyChannelConfig resolveNotifyChannel(String channel) {
+    Profile profile = current();
+    if (profile == null) {
+      throw new OryxException(
+          StandardErrorCode.PROFILE_NOT_FOUND, "No active Profile bound in current ProfileContext");
+    }
+    return profile.resolveNotifyChannel(channel);
   }
 }

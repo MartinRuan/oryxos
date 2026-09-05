@@ -12,27 +12,35 @@ if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
 }
 
 # ============================================================
-# 关键修复：强制 Win32 控制台回 GBK (Code Page 936)
 # ============================================================
-# PowerShell 7 默认将控制台代码页改为 65001 (UTF-8)，
-# 但 Win32 ReadFile() 在 cp65001 下对多字节 UTF-8 有已知 bug：
-#   - 可能返回 0 字节 (EOF)，导致 JVM 的 System.in.read() 立刻返回 -1
-#   - 中文输入法（IME）上屏的字符丢失或截断
+# 关键修复：Windows 控制台编码配置 (GBK / 代码页 936)
+# ============================================================
+# Windows PowerShell / CMD 下，中文输入法（IME）上屏默认依赖 GBK (cp936)。
+# 若强制切换为 cp65001 (UTF-8)，Win32 控制台输入缓冲区会导致中文丢失或产生乱码。
 #
-# 解决方案：切回系统原生 GBK (cp936)。
-# GBK 下 IME 输入稳定可靠，JVM 用 GBK 解码后内部是 Unicode，
-# HTTP 传输层（RestClient）自动用 UTF-8 发给 LLM API。
+# 解决方案：
+# 1. 默认设置控制台代码页为 936 (GBK)，让中文输入法稳定上屏
+# 2. 通过 -Doryxos.console.charset=GBK 让 CliChannel 以 GBK 解码控制台输入
+# 3. Java 内部统一为 Unicode，HTTP 传输层自动使用 UTF-8 与 LLM API 交互
 # ============================================================
-chcp 936 | Out-Null
+if ($env:ORYXOS_CONSOLE_CHARSET) {
+    $ConsoleCharset = $env:ORYXOS_CONSOLE_CHARSET
+} else {
+    try {
+        chcp 936 | Out-Null
+    } catch {}
+    $ConsoleCharset = "GBK"
+}
 
 $JvmArgs = @(
     "-Dloader.main=com.oryxos.cli.OryxOsCli",
-    "-Doryxos.console.charset=GBK"
+    "-Doryxos.console.charset=$ConsoleCharset"
 )
 
 if (Test-Path $BootJar) {
     & $JavaCmd @JvmArgs -cp $BootJar org.springframework.boot.loader.launch.PropertiesLauncher @CliArgs
 } else {
     $argString = $CliArgs -join ' '
-    & mvn spring-boot:run -pl oryxos-boot "-Dspring-boot.run.main-class=com.oryxos.cli.OryxOsCli" "-Dspring-boot.run.arguments=$argString"
+    $jvmArgString = "-Doryxos.console.charset=$ConsoleCharset"
+    & mvn spring-boot:run -pl oryxos-boot "-Dspring-boot.run.main-class=com.oryxos.cli.OryxOsCli" "-Dspring-boot.run.jvmArguments=$jvmArgString" "-Dspring-boot.run.arguments=$argString"
 }

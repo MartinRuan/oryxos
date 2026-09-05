@@ -12,9 +12,9 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.ChatOptions;
-import org.springframework.ai.chat.prompt.ChatOptionsBuilder;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 
 /**
  * 负责将 OryxOS 的统一 ChatRequest 转换为 Spring AI 的 Prompt 对象.
@@ -80,7 +80,7 @@ public final class PromptAdapter {
       }
     }
 
-    ChatOptionsBuilder optionsBuilder = ChatOptionsBuilder.builder();
+    OpenAiChatOptions.Builder optionsBuilder = OpenAiChatOptions.builder();
     if (resolvedModel != null && !resolvedModel.isBlank()) {
       optionsBuilder.withModel(resolvedModel);
     }
@@ -90,8 +90,12 @@ public final class PromptAdapter {
     if (request.getMaxTokens() != null) {
       optionsBuilder.withMaxTokens(request.getMaxTokens());
     }
+    if (request.getTools() != null && !request.getTools().isEmpty()) {
+      List<OpenAiApi.FunctionTool> functionTools =
+          FunctionCallingAdapter.toFunctionTools(request.getTools());
+      optionsBuilder.withTools(functionTools);
+    }
 
-    ChatOptions chatOptions = optionsBuilder.build();
-    return new Prompt(springAiMessages, chatOptions);
+    return new Prompt(springAiMessages, optionsBuilder.build());
   }
 }
