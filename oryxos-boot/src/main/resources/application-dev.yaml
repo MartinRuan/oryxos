@@ -3,7 +3,14 @@ logging:
     root: INFO
     com.oryxos: DEBUG
     org.springframework.web: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
 
 spring:
   jpa:
-    show-sql: true
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false

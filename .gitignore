@@ -33,3 +33,9 @@ logs/
 tmp/
 temp/
 scratch/
+
+# Local environment & secret files (never commit)
+.env
+.env.*
+.oryxos/.env
+.oryxos/.env.*

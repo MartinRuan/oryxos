@@ -75,4 +75,20 @@ class CliChannelTest {
 
     verify(agentService, times(0)).process(any(Session.class), any());
   }
+
+  @Test
+  @DisplayName("自适应解码：当终端输入为 GBK 字节流时能正确解析中文")
+  void 自适应解码_GBK字节流正确解析() {
+    String simulatedInput = "你好\n/quit\n";
+    InputStream in =
+        new ByteArrayInputStream(simulatedInput.getBytes(java.nio.charset.Charset.forName("GBK")));
+    ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    PrintStream out = new PrintStream(outContent, true, StandardCharsets.UTF_8);
+
+    when(agentService.process(any(Session.class), eq("你好"))).thenReturn("你好！");
+
+    cliChannel.run("default", in, out, StandardCharsets.UTF_8);
+
+    verify(agentService, times(1)).process(any(Session.class), eq("你好"));
+  }
 }

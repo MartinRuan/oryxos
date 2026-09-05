@@ -129,9 +129,19 @@ public class PromptBuilderImpl implements PromptBuilder {
     List<ToolDefinition> definitions = new ArrayList<>();
     for (String toolName : profile.getTools()) {
       if (toolName != null && !toolName.isBlank()) {
-        definitions.add(
-            new ToolDefinition(
-                toolName.trim(), "Tool for " + toolName.trim(), "{\"type\":\"object\"}"));
+        String trimmed = toolName.trim();
+        if ("notify".equalsIgnoreCase(trimmed)) {
+          String schema =
+              "{\"type\":\"object\",\"properties\":{"
+                  + "\"content\":{\"type\":\"string\",\"description\":\"待推送的消息内容\"},"
+                  + "\"channel\":{\"type\":\"string\",\"description\":\"可选通知渠道名称\"}},"
+                  + "\"required\":[\"content\"]}";
+          definitions.add(
+              new ToolDefinition("notify", "把一条消息推送到当前 Agent 配置好的通知渠道（如钉钉、飞书、企业微信群机器人）", schema));
+        } else {
+          definitions.add(
+              new ToolDefinition(trimmed, "Tool for " + trimmed, "{\"type\":\"object\"}"));
+        }
       }
     }
     return definitions;

@@ -26,9 +26,14 @@ spring:
 
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
+    open-in-view: false
     hibernate:
       ddl-auto: none
     show-sql: false
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
 
   sql:
     init:

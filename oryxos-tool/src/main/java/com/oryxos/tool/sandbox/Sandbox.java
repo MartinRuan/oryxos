@@ -14,4 +14,12 @@ public interface Sandbox {
    * @return true 若允许执行
    */
   boolean check(String target);
+
+  /**
+   * 强制执行沙箱安全白名单校验，若违规抛出异常.
+   *
+   * @param action 沙箱动作描述
+   * @throws RuntimeException 当动作被白名单拒绝时抛出
+   */
+  void enforce(SandboxAction action);
 }

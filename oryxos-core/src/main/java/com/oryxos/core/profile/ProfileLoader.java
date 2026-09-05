@@ -168,6 +168,11 @@ public class ProfileLoader {
     populateProvider(profile, map.get("provider"), availableProviders);
     populateLists(profile, map);
     populateChannels(profile, map.get("channels"));
+    populateNotifyChannels(
+        profile,
+        map.get("notify_channels") != null
+            ? map.get("notify_channels")
+            : map.get("notifyChannels"));
     populateSchedules(profile, map.get("schedules"));
     populateSettings(profile, map.get("settings"));
 
@@ -217,8 +222,8 @@ public class ProfileLoader {
     if (temp instanceof Number) {
       providerConfig.setTemperature(((Number) temp).doubleValue());
     }
-    providerConfig.setApiKey(getString(providerMap, "api_key", "apiKey"));
-    providerConfig.setBaseUrl(getString(providerMap, "base_url", "baseUrl"));
+    providerConfig.setApiKey(getString(providerMap, "api_key", "apiKey", "api-key"));
+    providerConfig.setBaseUrl(getString(providerMap, "base_url", "baseUrl", "base-url"));
     profile.setProvider(providerConfig);
   }
 
@@ -227,7 +232,44 @@ public class ProfileLoader {
     profile.setSkills(getStringList(map, "skills"));
     profile.setMcpServers(getStringList(map, "mcp_servers", "mcpServers"));
     profile.setBootstrap(getStringList(map, "bootstrap"));
-    profile.setNotifyChannels(getStringList(map, "notify_channels", "notifyChannels"));
+  }
+
+  @SuppressWarnings("unchecked")
+  private void populateNotifyChannels(Profile profile, Object notifyChannelsObj) {
+    if (notifyChannelsObj instanceof List) {
+      List<?> list = (List<?>) notifyChannelsObj;
+      List<Profile.NotifyChannelConfig> notifyChannels = new ArrayList<>();
+      for (Object item : list) {
+        if (item instanceof Map) {
+          Map<String, Object> channelMap = (Map<String, Object>) item;
+          String name = getString(channelMap, "name");
+          String type = getString(channelMap, "type");
+          if (type == null || type.trim().isEmpty()) {
+            type = "webhook";
+          }
+          if (name == null || name.trim().isEmpty()) {
+            name = type;
+          }
+          Map<String, String> config = new java.util.HashMap<>();
+          for (Map.Entry<String, Object> entry : channelMap.entrySet()) {
+            if (entry.getValue() != null) {
+              config.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
+          }
+          Profile.NotifyChannelConfig channelConfig =
+              new Profile.NotifyChannelConfig(name, type, config);
+          notifyChannels.add(channelConfig);
+        } else if (item instanceof String) {
+          String str = (String) item;
+          Map<String, String> config = new java.util.HashMap<>();
+          config.put("url", str);
+          Profile.NotifyChannelConfig channelConfig =
+              new Profile.NotifyChannelConfig(str, "webhook", config);
+          notifyChannels.add(channelConfig);
+        }
+      }
+      profile.setNotifyChannels(notifyChannels);
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -293,11 +335,63 @@ public class ProfileLoader {
     }
   }
 
+  private static final Map<String, String> DOT_ENV_CACHE =
+      new java.util.concurrent.ConcurrentHashMap<>();
+  private static volatile boolean dotEnvLoaded = false;
+
+  private static void ensureDotEnvLoaded() {
+    if (dotEnvLoaded) {
+      return;
+    }
+    synchronized (DOT_ENV_CACHE) {
+      if (dotEnvLoaded) {
+        return;
+      }
+      String userDir = System.getProperty("user.dir", ".");
+      List<Path> candidates =
+          List.of(
+              Path.of(".env"),
+              Path.of(".oryxos", ".env"),
+              Path.of(userDir, ".env"),
+              Path.of(userDir, ".oryxos", ".env"));
+      for (Path p : candidates) {
+        if (Files.isRegularFile(p)) {
+          try {
+            List<String> lines = Files.readAllLines(p, StandardCharsets.UTF_8);
+            for (String line : lines) {
+              String s = line.trim();
+              if (!s.isEmpty() && !s.startsWith("#") && s.indexOf('=') > 0) {
+                int eq = s.indexOf('=');
+                String k = s.substring(0, eq).trim();
+                String v = s.substring(eq + 1).trim();
+                if ((v.startsWith("\"") && v.endsWith("\""))
+                    || (v.startsWith("'") && v.endsWith("'"))) {
+                  if (v.length() >= 2) {
+                    v = v.substring(1, v.length() - 1);
+                  }
+                }
+                DOT_ENV_CACHE.putIfAbsent(k, v);
+                String existingProp = System.getProperty(k);
+                if (existingProp == null || existingProp.isBlank()) {
+                  System.setProperty(k, v);
+                }
+              }
+            }
+          } catch (Exception e) {
+            log.warn("Failed to load environment file: {}", p, e);
+          }
+        }
+      }
+      dotEnvLoaded = true;
+    }
+  }
+
   /** 解析文本中的 ${ENV_VAR} 与 ${ENV_VAR:default} 占位符（线性扫描防止 ReDoS）. */
   public String resolveEnvironmentVariables(String text) {
     if (text == null || text.isEmpty() || !text.contains(ENV_PREFIX)) {
       return text;
     }
+    ensureDotEnvLoaded();
     StringBuilder sb = new StringBuilder();
     int cursor = 0;
     while (cursor < text.length()) {
@@ -321,10 +415,13 @@ public class ProfileLoader {
         defaultVal = expr.substring(colonIdx + 1);
       }
       String envVal = System.getenv(varName);
-      if (envVal == null || envVal.isEmpty()) {
+      if (envVal == null || envVal.isBlank()) {
         envVal = System.getProperty(varName);
       }
-      if (envVal != null) {
+      if (envVal == null || envVal.isBlank()) {
+        envVal = DOT_ENV_CACHE.get(varName);
+      }
+      if (envVal != null && !envVal.isBlank()) {
         sb.append(envVal);
       } else if (defaultVal != null) {
         sb.append(defaultVal);

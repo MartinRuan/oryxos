@@ -3,11 +3,18 @@ package com.oryxos.channel.cli;
 import com.oryxos.core.model.Session;
 import com.oryxos.core.service.AgentService;
 import com.oryxos.core.session.SessionManager;
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,14 +91,15 @@ public class CliChannel {
     log.info("CliChannel started with session [{}] for profile [{}]", session.getId(), profileName);
     log.info("CliChannel input charset: {}", actualCharset.name());
 
-    try {
-      BufferedReader reader = new BufferedReader(new InputStreamReader(in, actualCharset));
+    BufferedInputStream bis =
+        in instanceof BufferedInputStream ? (BufferedInputStream) in : new BufferedInputStream(in);
 
+    try {
       while (true) {
         out.print("> ");
         out.flush();
+        String line = readLine(bis, actualCharset);
 
-        String line = reader.readLine();
         if (line == null) {
           break;
         }
@@ -119,7 +127,7 @@ public class CliChannel {
 
         try {
           String reply = agentService.process(session, trimmed);
-          out.println(reply);
+          out.println(sanitizeForConsole(reply, actualCharset));
           out.flush();
         } catch (Exception e) {
           log.error("Error processing user input in CLI session [{}]", session.getId(), e);
@@ -129,6 +137,70 @@ public class CliChannel {
       }
     } catch (Exception e) {
       log.error("CliChannel stream reading error in session [{}]", session.getId(), e);
+    }
+  }
+
+  private static final Charset GBK_CHARSET = Charset.forName("GBK");
+
+  /**
+   * 从输入流按行读取字节并自适应解码（自动兼容 UTF-8 与 GBK，解决 Windows 控制台 IME 输入乱码问题）.
+   *
+   * @param in 输入流
+   * @param preferredCharset 首选字符集
+   * @return 读取到的单行字符串，若流结束且无数据返回 null
+   * @throws IOException 输入流读取异常
+   */
+  private static String readLine(BufferedInputStream in, Charset preferredCharset)
+      throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    int b;
+    while ((b = in.read()) != -1) {
+      if (b == '\n') {
+        break;
+      }
+      if (b != '\r') {
+        baos.write(b);
+      }
+    }
+    if (b == -1 && baos.size() == 0) {
+      return null;
+    }
+    return decodeInputBytes(baos.toByteArray(), preferredCharset);
+  }
+
+  /**
+   * 自适应解码输入字节数组，先以 preferredCharset 尝试严格解码，若格式非法则回退到备用编码（UTF-8 <-> GBK）.
+   *
+   * @param bytes 字节数组
+   * @param preferredCharset 首选字符集
+   * @return 解码后的字符串
+   */
+  private static String decodeInputBytes(byte[] bytes, Charset preferredCharset) {
+    if (bytes == null || bytes.length == 0) {
+      return "";
+    }
+    Charset primary = preferredCharset != null ? preferredCharset : StandardCharsets.UTF_8;
+    Charset secondary =
+        StandardCharsets.UTF_8.equals(primary) ? GBK_CHARSET : StandardCharsets.UTF_8;
+
+    try {
+      CharsetDecoder decoder =
+          primary
+              .newDecoder()
+              .onMalformedInput(CodingErrorAction.REPORT)
+              .onUnmappableCharacter(CodingErrorAction.REPORT);
+      return decoder.decode(ByteBuffer.wrap(bytes)).toString();
+    } catch (CharacterCodingException e) {
+      try {
+        CharsetDecoder secDecoder =
+            secondary
+                .newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT);
+        return secDecoder.decode(ByteBuffer.wrap(bytes)).toString();
+      } catch (CharacterCodingException ex) {
+        return new String(bytes, primary);
+      }
     }
   }
 
@@ -155,5 +227,34 @@ public class CliChannel {
     Charset fallback = Charset.defaultCharset();
     log.debug("No oryxos.console.charset set, using JVM default charset: {}", fallback.name());
     return fallback;
+  }
+
+  /**
+   * 过滤控制台无法编码的特殊字符（如 4 字节 Emoji 在 GBK 代码页下会自动降级为问号 '?'）.
+   *
+   * @param text 待输出给控制台的文本
+   * @param charset 控制台输出字符编码
+   * @return 过滤不可映射字符后的整洁文本
+   */
+  private static String sanitizeForConsole(String text, Charset charset) {
+    if (text == null
+        || text.isEmpty()
+        || charset == null
+        || StandardCharsets.UTF_8.equals(charset)) {
+      return text;
+    }
+    CharsetEncoder encoder = charset.newEncoder();
+    StringBuilder sb = new StringBuilder(text.length());
+    int i = 0;
+    while (i < text.length()) {
+      int codePoint = text.codePointAt(i);
+      int charCount = Character.charCount(codePoint);
+      String s = text.substring(i, i + charCount);
+      if (encoder.canEncode(s)) {
+        sb.append(s);
+      }
+      i += charCount;
+    }
+    return sb.toString();
   }
 }
