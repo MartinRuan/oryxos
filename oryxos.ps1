@@ -4,6 +4,9 @@ param(
 )
 
 $RootDir = $PSScriptRoot
+if (-not $RootDir) {
+    $RootDir = (Get-Location).Path
+}
 $BootJar = Join-Path $RootDir "oryxos-boot\target\oryxos-boot-0.1.0-SNAPSHOT.jar"
 
 $JavaCmd = "java"
@@ -12,6 +15,29 @@ if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
 }
 
 # ============================================================
+# 加载本地环境配置 (.env / .oryxos/.env)
+# 仅供本地开发与测试使用，已被 .gitignore 忽略，不会随代码提交
+# ============================================================
+$EnvCandidates = @(
+    Join-Path $RootDir ".env",
+    Join-Path $RootDir ".oryxos\.env"
+)
+foreach ($envPath in $EnvCandidates) {
+    if (Test-Path $envPath) {
+        Get-Content $envPath -Encoding UTF8 | ForEach-Object {
+            $s = $_.Trim()
+            if ($s -and -not $s.StartsWith("#") -and $s.Contains("=")) {
+                $idx = $s.IndexOf("=")
+                $varName = $s.Substring(0, $idx).Trim()
+                $varVal = $s.Substring($idx + 1).Trim().Trim('"').Trim("'")
+                if (-not (Test-Path "env:$varName")) {
+                    Set-Item -Path "env:$varName" -Value $varVal
+                }
+            }
+        }
+    }
+}
+
 # ============================================================
 # 关键修复：Windows 控制台编码配置 (GBK / 代码页 936)
 # ============================================================
