@@ -28,6 +28,7 @@ logs/
 .oryxos/*.db
 .oryxos/oryxos.db*
 .oryxos/sessions/
+oryxos-*/.oryxos/
 
 # Temporary / Scratch files
 tmp/

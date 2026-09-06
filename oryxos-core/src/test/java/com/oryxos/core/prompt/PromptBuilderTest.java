@@ -109,4 +109,20 @@ class PromptBuilderTest {
     assertEquals(MessageType.SYSTEM, systemMsg.getRole());
     assertTrue(systemMsg.getContent().contains("当前日期时间: "));
   }
+
+  @Test
+  @DisplayName("长期记忆无缝拼装进SystemPrompt")
+  void 长期记忆无缝拼装进SystemPrompt() {
+    com.oryxos.memory.MemoryService mockMemory =
+        org.mockito.Mockito.mock(com.oryxos.memory.MemoryService.class);
+    when(mockMemory.buildContext(session))
+        .thenReturn("[长期记忆]\n## 核心记忆\n- [2026-09-05] 用户叫小王，偏好用 Java");
+
+    PromptBuilder memoryPromptBuilder = new PromptBuilderImpl(contextLoader, mockMemory);
+    ChatRequest request = memoryPromptBuilder.build(session, profile);
+
+    ChatMessage systemMsg = request.getMessages().get(0);
+    assertTrue(systemMsg.getContent().contains("[长期记忆]"));
+    assertTrue(systemMsg.getContent().contains("用户叫小王，偏好用 Java"));
+  }
 }
