@@ -29,14 +29,27 @@ public class PromptBuilderImpl implements PromptBuilder {
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   private final ContextLoader contextLoader;
+  private final com.oryxos.memory.MemoryService memoryService;
 
   /**
-   * 构造 Prompt 组装器.
+   * 构造 Prompt 组装器（兼容无 Memory 模块场景）.
    *
    * @param contextLoader 上下文加载器
    */
   public PromptBuilderImpl(ContextLoader contextLoader) {
+    this(contextLoader, null);
+  }
+
+  /**
+   * 构造包含记忆服务的 Prompt 组装器.
+   *
+   * @param contextLoader 上下文加载器
+   * @param memoryService 记忆门面服务（可选）
+   */
+  public PromptBuilderImpl(
+      ContextLoader contextLoader, com.oryxos.memory.MemoryService memoryService) {
     this.contextLoader = contextLoader;
+    this.memoryService = memoryService;
   }
 
   @Override
@@ -46,8 +59,8 @@ public class PromptBuilderImpl implements PromptBuilder {
 
     List<ChatMessage> assembledMessages = new ArrayList<>();
 
-    // 1. 组装 System Prompt (角色设定 + Bootstrap/Skill + 当前日期时间)
-    String systemPrompt = buildSystemPrompt(profile);
+    // 1. 组装 System Prompt (角色设定 + Bootstrap/Skill + 长期记忆 + 当前日期时间)
+    String systemPrompt = buildSystemPrompt(session, profile);
     if (!systemPrompt.isBlank()) {
       assembledMessages.add(ChatMessage.system(systemPrompt));
     }
@@ -78,7 +91,7 @@ public class PromptBuilderImpl implements PromptBuilder {
     return requestBuilder.build();
   }
 
-  private String buildSystemPrompt(Profile profile) {
+  private String buildSystemPrompt(Session session, Profile profile) {
     StringBuilder sb = new StringBuilder();
 
     if (profile.getIdentity() != null && profile.getIdentity().getPrompt() != null) {
@@ -92,6 +105,16 @@ public class PromptBuilderImpl implements PromptBuilder {
           sb.append("\n\n");
         }
         sb.append(loadedContext.trim());
+      }
+    }
+
+    if (memoryService != null && session != null) {
+      String memoryContext = memoryService.buildContext(session);
+      if (memoryContext != null && !memoryContext.isBlank()) {
+        if (sb.length() > 0) {
+          sb.append("\n\n");
+        }
+        sb.append(memoryContext.trim());
       }
     }
 

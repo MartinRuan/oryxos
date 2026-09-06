@@ -54,12 +54,16 @@ public class CoreAutoConfiguration {
    * 注册缺省 PromptBuilder.
    *
    * @param contextLoader 上下文加载器
+   * @param memoryServiceProvider 记忆服务提供者（可选）
    * @return PromptBuilder 实例
    */
   @Bean
   @ConditionalOnMissingBean
-  public PromptBuilder promptBuilder(ContextLoader contextLoader) {
-    return new PromptBuilderImpl(contextLoader);
+  public PromptBuilder promptBuilder(
+      ContextLoader contextLoader,
+      org.springframework.beans.factory.ObjectProvider<com.oryxos.memory.MemoryService>
+          memoryServiceProvider) {
+    return new PromptBuilderImpl(contextLoader, memoryServiceProvider.getIfAvailable());
   }
 
   /**
