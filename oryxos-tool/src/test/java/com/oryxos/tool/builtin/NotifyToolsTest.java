@@ -18,6 +18,7 @@ import com.oryxos.core.model.ToolResult;
 import com.oryxos.tool.notify.NotifyChannelAdapter;
 import com.oryxos.tool.sandbox.ActionType;
 import com.oryxos.tool.sandbox.Sandbox;
+import com.oryxos.tool.sandbox.SandboxViolationException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -127,12 +128,12 @@ class NotifyToolsTest {
                         "default", "webhook", Map.of("url", "https://unauthorized.domain.com"))))
             .build();
     ProfileContext.set(profile);
-    doThrow(new RuntimeException("Sandbox check failed: domain not in whitelist"))
+    doThrow(new SandboxViolationException("Sandbox check failed: domain not in whitelist"))
         .when(sandbox)
         .enforce(any());
 
     assertThatThrownBy(() -> notifyTools.notify("hello", "default"))
-        .isInstanceOf(RuntimeException.class)
+        .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox check failed");
 
     verify(adapter, never()).send(any(), any());

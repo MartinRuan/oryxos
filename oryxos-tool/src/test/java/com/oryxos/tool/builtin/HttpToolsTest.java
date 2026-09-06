@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import com.oryxos.core.OryxTool;
 import com.oryxos.core.model.ToolResult;
 import com.oryxos.tool.sandbox.Sandbox;
+import com.oryxos.tool.sandbox.SandboxViolationException;
 import com.sun.net.httpserver.HttpServer;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -86,7 +87,7 @@ class HttpToolsTest {
   @Test
   @DisplayName("http_get 命中白名单外域名应被拦下")
   void http_get_命中白名单外域名应被拦下() {
-    doThrow(new RuntimeException("Sandbox violation: domain not allowed"))
+    doThrow(new SandboxViolationException("Sandbox violation: domain not allowed"))
         .when(sandbox)
         .enforce(any());
 
@@ -94,7 +95,7 @@ class HttpToolsTest {
     String inputJson = "{\"url\":\"https://evil.example.com/api\"}";
 
     assertThatThrownBy(() -> getTool.execute(inputJson))
-        .isInstanceOf(RuntimeException.class)
+        .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox violation");
   }
 
@@ -115,7 +116,7 @@ class HttpToolsTest {
   @Test
   @DisplayName("http_post 命中白名单外域名应被拦下")
   void http_post_命中白名单外域名应被拦下() {
-    doThrow(new RuntimeException("Sandbox violation: domain not allowed"))
+    doThrow(new SandboxViolationException("Sandbox violation: domain not allowed"))
         .when(sandbox)
         .enforce(any());
 
@@ -123,7 +124,7 @@ class HttpToolsTest {
     String inputJson = "{\"url\":\"https://unauthorized.target.com/upload\",\"body\":\"data\"}";
 
     assertThatThrownBy(() -> postTool.execute(inputJson))
-        .isInstanceOf(RuntimeException.class)
+        .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox violation");
   }
 }

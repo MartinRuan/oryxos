@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.oryxos.core.model.ToolResult;
 import com.oryxos.tool.sandbox.ActionType;
 import com.oryxos.tool.sandbox.Sandbox;
+import com.oryxos.tool.sandbox.SandboxViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,14 +56,14 @@ class ShellToolsTest {
   @Test
   @DisplayName("shell 命中白名单外命令应被拦截")
   void shell_命中白名单外命令应被拦截() {
-    doThrow(new RuntimeException("Sandbox violation: command not allowed"))
+    doThrow(new SandboxViolationException("Sandbox violation: command not allowed"))
         .when(sandbox)
         .enforce(any());
 
     String inputJson = "{\"command\":\"rm\",\"args\":[\"-rf\",\"/\"]}";
 
     assertThatThrownBy(() -> shellTools.execute(inputJson))
-        .isInstanceOf(RuntimeException.class)
+        .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox violation");
   }
 
