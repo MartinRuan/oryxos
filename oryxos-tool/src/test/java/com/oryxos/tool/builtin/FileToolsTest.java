@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import com.oryxos.core.OryxTool;
 import com.oryxos.core.model.ToolResult;
 import com.oryxos.tool.sandbox.Sandbox;
+import com.oryxos.tool.sandbox.SandboxViolationException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,13 +54,13 @@ class FileToolsTest {
   @Test
   @DisplayName("read_file 命中白名单外路径应被拦截")
   void readFile_命中白名单外路径应被拦截() {
-    doThrow(new RuntimeException("Sandbox violation: path not allowed"))
+    doThrow(new SandboxViolationException("Sandbox violation: path not allowed"))
         .when(sandbox)
         .enforce(any());
 
     OryxTool readTool = fileTools.getReadFileTool();
     assertThatThrownBy(() -> readTool.execute("{\"path\":\"/etc/shadow\"}"))
-        .isInstanceOf(RuntimeException.class)
+        .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox violation");
   }
 
@@ -84,7 +85,7 @@ class FileToolsTest {
   @DisplayName("write_file 命中白名单外路径应被拦截且不创建文件")
   void writeFile_命中白名单外路径应被拦截() {
     Path forbiddenFile = tempDir.resolve("forbidden.txt");
-    doThrow(new RuntimeException("Sandbox violation: path not allowed"))
+    doThrow(new SandboxViolationException("Sandbox violation: path not allowed"))
         .when(sandbox)
         .enforce(any());
 
@@ -95,7 +96,7 @@ class FileToolsTest {
             + "\",\"content\":\"Should not exist\"}";
 
     assertThatThrownBy(() -> writeTool.execute(inputJson))
-        .isInstanceOf(RuntimeException.class)
+        .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox violation");
 
     assertThat(Files.exists(forbiddenFile)).isFalse();
@@ -119,13 +120,13 @@ class FileToolsTest {
   @Test
   @DisplayName("list_dir 命中白名单外路径应被拦截")
   void listDir_命中白名单外路径应被拦截() {
-    doThrow(new RuntimeException("Sandbox violation: path not allowed"))
+    doThrow(new SandboxViolationException("Sandbox violation: path not allowed"))
         .when(sandbox)
         .enforce(any());
 
     OryxTool listTool = fileTools.getListDirTool();
     assertThatThrownBy(() -> listTool.execute("{\"path\":\"/root\"}"))
-        .isInstanceOf(RuntimeException.class)
+        .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox violation");
   }
 }

@@ -9,11 +9,15 @@ import com.oryxos.tool.builtin.NotifyTools;
 import com.oryxos.tool.builtin.ShellTools;
 import com.oryxos.tool.notify.NotifyChannelAdapter;
 import com.oryxos.tool.notify.WebhookNotifyAdapter;
+import com.oryxos.tool.sandbox.FileSandboxProperties;
+import com.oryxos.tool.sandbox.HttpSandboxProperties;
 import com.oryxos.tool.sandbox.Sandbox;
-import com.oryxos.tool.sandbox.SandboxAction;
+import com.oryxos.tool.sandbox.ShellSandboxProperties;
+import com.oryxos.tool.sandbox.WhitelistSandbox;
 import java.util.List;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestClient;
 
@@ -23,6 +27,11 @@ import org.springframework.web.client.RestClient;
  * @author OryxOS Team
  */
 @AutoConfiguration
+@EnableConfigurationProperties({
+  FileSandboxProperties.class,
+  ShellSandboxProperties.class,
+  HttpSandboxProperties.class
+})
 public class ToolAutoConfiguration {
 
   /**
@@ -37,14 +46,20 @@ public class ToolAutoConfiguration {
   }
 
   /**
-   * 注册缺省沙箱安全检查器（核心阶段占位，24 节由 WhitelistSandbox 完整承接）.
+   * 注册应用层白名单安全沙箱.
    *
+   * @param fileProps 文件路径白名单配置
+   * @param shellProps Shell 命令白名单配置
+   * @param httpProps HTTP 域名白名单配置
    * @return Sandbox 实例
    */
   @Bean
   @ConditionalOnMissingBean
-  public Sandbox sandbox() {
-    return new DefaultSandbox();
+  public Sandbox sandbox(
+      FileSandboxProperties fileProps,
+      ShellSandboxProperties shellProps,
+      HttpSandboxProperties httpProps) {
+    return new WhitelistSandbox(fileProps, shellProps, httpProps);
   }
 
   /**
@@ -151,19 +166,5 @@ public class ToolAutoConfiguration {
       }
     }
     return registry;
-  }
-
-  /** 缺省放行沙箱实现（占位用途，24 节由 WhitelistSandbox 完整承接）. */
-  public static class DefaultSandbox implements Sandbox {
-
-    @Override
-    public boolean check(String target) {
-      return true;
-    }
-
-    @Override
-    public void enforce(SandboxAction action) {
-      // 核心占位放行，24 节接驳 WhitelistSandbox 白名单校验
-    }
   }
 }

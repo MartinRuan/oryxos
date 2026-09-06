@@ -107,3 +107,29 @@ management:
   metrics:
     tags:
       application: oryxos
+
+# Sandbox Whitelist Security Configuration
+file:
+  allowed-paths:
+    - .oryxos
+    - .
+shell:
+  allowed-commands:
+    - echo
+    - ls
+    - git
+    - date
+    - pwd
+    - whoami
+http:
+  allowed-domains:
+    - api.openai.com
+    - api.deepseek.com
+    - dashscope.aliyuncs.com
+    - api.moonshot.cn
+    - localhost
+    - 127.0.0.1
+    - "*.feishu.cn"
+    - "*.dingtalk.com"
+    - "*.weixin.qq.com"
+
