@@ -25,14 +25,14 @@
 
 ### Tests
 
-- [X] T003 [P] 先在 `oryxos-web/src/test/java/com/oryxos/web/exception/GlobalExceptionHandlerTest.java` 编写 400/404/500/503/504 映射、统一 `ApiResponse` 四字段和 500 不泄露原始异常消息的失败测试
-- [X] T004 [P] 先在 `oryxos-web/src/test/java/com/oryxos/web/service/AgentInvocationRunnerTest.java` 编写正常返回、超时取消、执行异常透传和等待线程中断恢复标志的失败测试
+- [ ] T003 [P] 先在 `oryxos-web/src/test/java/com/oryxos/web/exception/GlobalExceptionHandlerTest.java` 编写 400/404/500/503/504 映射、统一 `ApiResponse` 四字段和 500 不泄露原始异常消息的失败测试
+- [ ] T004 [P] 先在 `oryxos-web/src/test/java/com/oryxos/web/service/AgentInvocationRunnerTest.java` 编写正常返回、超时取消、执行异常透传和等待线程中断恢复标志的失败测试
 
 ### Implementation
 
-- [X] T005 实现 `oryxos-web/src/main/java/com/oryxos/web/exception/AgentInvocationTimeoutException.java` 与 `oryxos-web/src/main/java/com/oryxos/web/service/AgentInvocationRunner.java`，注入 Boot 自动配置的虚拟线程 `applicationTaskExecutor` 并使用阻塞式 `Future.get(60, SECONDS)`
-- [X] T006 重构 `oryxos-web/src/main/java/com/oryxos/web/exception/GlobalExceptionHandler.java`，让既有 `ErrorCode` 获得真实 HTTP 状态、504 使用固定协议、500 仅记录内部详情并返回通用消息
-- [X] T007 在 `oryxos-web/src/main/java/com/oryxos/web/config/WebConfig.java` 配置核心阶段全开放 CORS，并验证直接复用 Boot `applicationTaskExecutor`，不声明线程池且不引入 WebFlux、Reactor 或 `CompletableFuture`
+- [ ] T005 实现 `oryxos-web/src/main/java/com/oryxos/web/exception/AgentInvocationTimeoutException.java` 与 `oryxos-web/src/main/java/com/oryxos/web/service/AgentInvocationRunner.java`，注入 Boot 自动配置的虚拟线程 `applicationTaskExecutor` 并使用阻塞式 `Future.get(60, SECONDS)`
+- [ ] T006 重构 `oryxos-web/src/main/java/com/oryxos/web/exception/GlobalExceptionHandler.java`，让既有 `ErrorCode` 获得真实 HTTP 状态、504 使用固定协议、500 仅记录内部详情并返回通用消息
+- [ ] T007 在 `oryxos-web/src/main/java/com/oryxos/web/config/WebConfig.java` 配置核心阶段全开放 CORS，并验证直接复用 Boot `applicationTaskExecutor`，不声明线程池且不引入 WebFlux、Reactor 或 `CompletableFuture`
 
 **Checkpoint**: 统一错误出口与同步超时边界可独立测试。
 
@@ -46,18 +46,18 @@
 
 ### Tests for User Story 1
 
-- [X] T008 [P] [US1] 先扩展 `oryxos-core/src/test/java/com/oryxos/core/session/SessionManagerTest.java`，为 `list()` 编写空列表、最后活动时间倒序和归档后仍可查询的失败测试
-- [X] T009 [P] [US1] 先扩展 `oryxos-storage/src/test/java/com/oryxos/storage/repository/SessionRepositoryTest.java`，为 SQLite 会话列表最后活动时间倒序编写失败测试
-- [X] T010 [US1] 先创建 `oryxos-web/src/test/java/com/oryxos/web/controller/SessionApiControllerTest.java`，覆盖五个会话端点、32KB+1 返回 400、Session 不存在/已归档返回 404、最近 100 条历史、集合摘要不含消息正文，以及正常消息请求对 `AgentService.process` 恰调用一次
+- [ ] T008 [P] [US1] 先扩展 `oryxos-core/src/test/java/com/oryxos/core/session/SessionManagerTest.java`，为 `list()` 编写空列表、最后活动时间倒序和归档后仍可查询的失败测试
+- [ ] T009 [P] [US1] 先扩展 `oryxos-storage/src/test/java/com/oryxos/storage/repository/SessionRepositoryTest.java`，为 SQLite 会话列表最后活动时间倒序编写失败测试
+- [ ] T010 [US1] 先创建 `oryxos-web/src/test/java/com/oryxos/web/controller/SessionApiControllerTest.java`，覆盖五个会话端点、32KB+1 返回 400、Session 不存在/已归档返回 404、最近 100 条历史、集合摘要不含消息正文，以及正常消息请求对 `AgentService.process` 恰调用一次
 
 ### Implementation for User Story 1
 
-- [X] T011 [P] [US1] 在 `oryxos-core/src/main/java/com/oryxos/core/session/SessionManager.java` 增加只读 `list()` 契约，并在 `oryxos-core/src/main/java/com/oryxos/core/session/InMemorySessionManager.java` 实现最后活动时间倒序且保留已归档会话
-- [X] T012 [P] [US1] 在 `oryxos-storage/src/main/java/com/oryxos/storage/repository/SessionRepository.java` 增加最后活动时间倒序查询，并在 `oryxos-storage/src/main/java/com/oryxos/storage/session/JpaSessionManager.java` 映射实现 `list()`
-- [X] T013 [P] [US1] 创建 `oryxos-web/src/main/java/com/oryxos/web/dto/CreateSessionRequest.java`、`MessageRequest.java`、`MessageResponse.java`、`MessageView.java`、`SessionSummary.java` 和 `SessionDetail.java`，落实非空、32KB 和安全响应字段
-- [X] T014 [US1] 在 `oryxos-web/src/main/java/com/oryxos/web/dto/SessionDtoMapper.java` 实现会话摘要与详情映射，详情只保留最新 100 条消息且维持原顺序
-- [X] T015 [US1] 实现 `oryxos-web/src/main/java/com/oryxos/web/controller/SessionApiController.java` 的五个会话端点，创建时验证 Profile 并固定 channel=`web`，发消息通过 `AgentInvocationRunner` 委托统一 `AgentService.process`
-- [X] T016 [US1] 运行 `./mvnw -pl oryxos-web,oryxos-storage -am test`，确认 US1 新增测试和受影响的 Session 回归测试全绿
+- [ ] T011 [P] [US1] 在 `oryxos-core/src/main/java/com/oryxos/core/session/SessionManager.java` 增加只读 `list()` 契约，并在 `oryxos-core/src/main/java/com/oryxos/core/session/InMemorySessionManager.java` 实现最后活动时间倒序且保留已归档会话
+- [ ] T012 [P] [US1] 在 `oryxos-storage/src/main/java/com/oryxos/storage/repository/SessionRepository.java` 增加最后活动时间倒序查询，并在 `oryxos-storage/src/main/java/com/oryxos/storage/session/JpaSessionManager.java` 映射实现 `list()`
+- [ ] T013 [P] [US1] 创建 `oryxos-web/src/main/java/com/oryxos/web/dto/CreateSessionRequest.java`、`MessageRequest.java`、`MessageResponse.java`、`MessageView.java`、`SessionSummary.java` 和 `SessionDetail.java`，落实非空、32KB 和安全响应字段
+- [ ] T014 [US1] 在 `oryxos-web/src/main/java/com/oryxos/web/dto/SessionDtoMapper.java` 实现会话摘要与详情映射，详情只保留最新 100 条消息且维持原顺序
+- [ ] T015 [US1] 实现 `oryxos-web/src/main/java/com/oryxos/web/controller/SessionApiController.java` 的五个会话端点，创建时验证 Profile 并固定 channel=`web`，发消息通过 `AgentInvocationRunner` 委托统一 `AgentService.process`
+- [ ] T016 [US1] 运行 `./mvnw -pl oryxos-web,oryxos-storage -am test`，确认 US1 新增测试和受影响的 Session 回归测试全绿
 
 **Checkpoint**: 连续会话 MVP 可独立运行，方案 A 的第 11 个集合端点已生效。
 
@@ -71,13 +71,13 @@
 
 ### Tests for User Story 2
 
-- [X] T017 [US2] 先创建 `oryxos-web/src/test/java/com/oryxos/web/controller/AgentApiControllerTest.java`，覆盖成功回复、临时唯一 Session、未知 Agent 404、Provider 503、60 秒边界 504，并验证仍只调用一次 `AgentService.process`
+- [ ] T017 [US2] 先创建 `oryxos-web/src/test/java/com/oryxos/web/controller/AgentApiControllerTest.java`，覆盖成功回复、临时唯一 Session、未知 Agent 404、Provider 503、60 秒边界 504，并验证仍只调用一次 `AgentService.process`
 
 ### Implementation for User Story 2
 
-- [X] T018 [P] [US2] 创建 `oryxos-web/src/main/java/com/oryxos/web/dto/AgentReply.java`，只暴露最终 `reply`，不暴露临时 Session ID
-- [X] T019 [US2] 实现 `oryxos-web/src/main/java/com/oryxos/web/controller/AgentApiController.java`，通过 `ProfileRegistry` 解析 Agent、生成一次性 Session，并经 `AgentInvocationRunner` 调用统一引擎
-- [X] T020 [US2] 运行 `./mvnw -pl oryxos-web -am test`，确认 US2 与共享超时/异常回归全绿
+- [ ] T018 [P] [US2] 创建 `oryxos-web/src/main/java/com/oryxos/web/dto/AgentReply.java`，只暴露最终 `reply`，不暴露临时 Session ID
+- [ ] T019 [US2] 实现 `oryxos-web/src/main/java/com/oryxos/web/controller/AgentApiController.java`，通过 `ProfileRegistry` 解析 Agent、生成一次性 Session，并经 `AgentInvocationRunner` 调用统一引擎
+- [ ] T020 [US2] 运行 `./mvnw -pl oryxos-web -am test`，确认 US2 与共享超时/异常回归全绿
 
 **Checkpoint**: 一次性调用可独立于会话 API 使用。
 
@@ -91,17 +91,17 @@
 
 ### Tests for User Story 3
 
-- [X] T021 [P] [US3] 先扩展 `oryxos-memory/src/test/java/com/oryxos/memory/MemoryServiceTest.java`，为 `MemoryService.load()` 复用长期记忆加载策略编写失败测试
-- [X] T022 [P] [US3] 先将 `oryxos-web/src/test/java/com/oryxos/web/controller/SystemControllerTest.java` 替换为 `SystemApiControllerTest.java`，覆盖 Provider 可用状态且断言响应序列化不含 `apiKey`
-- [X] T023 [US3] 先创建 `oryxos-boot/src/test/java/com/oryxos/boot/WebSmokeIT.java` 并标记 `@Tag("integration")`，用真实上下文覆盖 `/api/v1/health`、`/info`、`/profiles`、`/tools` 的 Bean 装配与 JPA repository 扫描
+- [ ] T021 [P] [US3] 先扩展 `oryxos-memory/src/test/java/com/oryxos/memory/MemoryServiceTest.java`，为 `MemoryService.load()` 复用长期记忆加载策略编写失败测试
+- [ ] T022 [P] [US3] 先将 `oryxos-web/src/test/java/com/oryxos/web/controller/SystemControllerTest.java` 替换为 `SystemApiControllerTest.java`，覆盖 Provider 可用状态且断言响应序列化不含 `apiKey`
+- [ ] T023 [US3] 先创建 `oryxos-boot/src/test/java/com/oryxos/boot/WebSmokeIT.java` 并标记 `@Tag("integration")`，用真实上下文覆盖 `/api/v1/health`、`/info`、`/profiles`、`/tools` 的 Bean 装配与 JPA repository 扫描
 
 ### Implementation for User Story 3
 
-- [X] T024 [P] [US3] 在 `oryxos-core/src/main/java/com/oryxos/memory/MemoryService.java` 增加只读 `load()` 契约，并在 `oryxos-memory/src/main/java/com/oryxos/memory/impl/MemoryServiceImpl.java` 委托 `LongTermMemory.load()`
-- [X] T025 [P] [US3] 创建 `oryxos-web/src/main/java/com/oryxos/web/dto/ProfileSummary.java`、`ToolSummary.java`、`MemoryView.java`、`ProviderView.java` 和 `SystemInfo.java`，显式排除 API key、通知目标与其他敏感配置
-- [X] T026 [P] [US3] 实现 `oryxos-web/src/main/java/com/oryxos/web/controller/ProfileApiController.java`、`MemoryApiController.java` 和 `ToolApiController.java`，分别委托既有 Registry/Service 并返回安全只读 DTO
-- [X] T027 [US3] 将 `oryxos-web/src/main/java/com/oryxos/web/controller/SystemController.java` 替换为 `SystemApiController.java`，保留 health 并让 info 通过显式 `ProviderRegistry` 返回安全连通状态
-- [X] T028 [US3] 显式运行 `./mvnw -pl oryxos-boot -am -Dtest=WebSmokeIT -Dsurefire.failIfNoSpecifiedTests=false test`，并运行 `./mvnw -pl oryxos-web,oryxos-memory -am test`，确认 US3 冒烟和单测全绿
+- [ ] T024 [P] [US3] 在 `oryxos-core/src/main/java/com/oryxos/memory/MemoryService.java` 增加只读 `load()` 契约，并在 `oryxos-memory/src/main/java/com/oryxos/memory/impl/MemoryServiceImpl.java` 委托 `LongTermMemory.load()`
+- [ ] T025 [P] [US3] 创建 `oryxos-web/src/main/java/com/oryxos/web/dto/ProfileSummary.java`、`ToolSummary.java`、`MemoryView.java`、`ProviderView.java` 和 `SystemInfo.java`，显式排除 API key、通知目标与其他敏感配置
+- [ ] T026 [P] [US3] 实现 `oryxos-web/src/main/java/com/oryxos/web/controller/ProfileApiController.java`、`MemoryApiController.java` 和 `ToolApiController.java`，分别委托既有 Registry/Service 并返回安全只读 DTO
+- [ ] T027 [US3] 将 `oryxos-web/src/main/java/com/oryxos/web/controller/SystemController.java` 替换为 `SystemApiController.java`，保留 health 并让 info 通过显式 `ProviderRegistry` 返回安全连通状态
+- [ ] T028 [US3] 显式运行 `./mvnw -pl oryxos-boot -am -Dtest=WebSmokeIT -Dsurefire.failIfNoSpecifiedTests=false test`，并运行 `./mvnw -pl oryxos-web,oryxos-memory -am test`，确认 US3 冒烟和单测全绿
 
 **Checkpoint**: 五个只读查询端点可由真实应用上下文提供。
 
@@ -115,13 +115,13 @@
 
 ### Tests for User Story 4
 
-- [X] T029 [US4] 先扩展 `oryxos-boot/src/test/java/com/oryxos/boot/WebSmokeIT.java`，验证 `/admin` 静态资源可达、包含五个导航入口、引用五个只读 GET 数据源且不包含新建/编辑/删除/执行控件
+- [ ] T029 [US4] 先扩展 `oryxos-boot/src/test/java/com/oryxos/boot/WebSmokeIT.java`，验证 `/admin` 静态资源可达、包含五个导航入口、引用五个只读 GET 数据源且不包含新建/编辑/删除/执行控件
 
 ### Implementation for User Story 4
 
-- [X] T030 [P] [US4] 在 `oryxos-web/src/main/resources/static/admin/index.html` 与 `styles.css` 实现无需构建工具的响应式只读五导航页面
-- [X] T031 [US4] 在 `oryxos-web/src/main/resources/static/admin/app.js` 调用 sessions/profiles/tools/memory/info 五个 GET 端点，渲染空态与真实数据，并在失败时显示统一响应的 `message`
-- [X] T032 [US4] 显式运行 `./mvnw -pl oryxos-boot -am -Dtest=WebSmokeIT -Dsurefire.failIfNoSpecifiedTests=false test`，确认管理页静态资源与只读约束全绿
+- [ ] T030 [P] [US4] 在 `oryxos-web/src/main/resources/static/admin/index.html` 与 `styles.css` 实现无需构建工具的响应式只读五导航页面
+- [ ] T031 [US4] 在 `oryxos-web/src/main/resources/static/admin/app.js` 调用 sessions/profiles/tools/memory/info 五个 GET 端点，渲染空态与真实数据，并在失败时显示统一响应的 `message`
+- [ ] T032 [US4] 显式运行 `./mvnw -pl oryxos-boot -am -Dtest=WebSmokeIT -Dsurefire.failIfNoSpecifiedTests=false test`，确认管理页静态资源与只读约束全绿
 
 **Checkpoint**: 管理平台五个区域可查看真实数据且无写入口。
 
@@ -131,8 +131,8 @@
 
 **Purpose**: 对 11 端点契约、课程 harness、全局架构不变量和人工真链路做最终收敛。
 
-- [X] T033 [P] 对照 `specs/026-lesson26-web-service/contracts/rest-api.md` 检查六个 Controller 的 OpenAPI 注解、11 个端点、统一 `ApiResponse`、CORS 与 `/swagger-ui`，修正遗漏但不增加范围
-- [X] T034 运行 `./mvnw clean verify`，再用 `rg` 检查本节 Web 业务代码不存在 `System.out`、WebFlux/Reactor/`CompletableFuture`、自建线程池、Spring AI 自动 Tool 执行和增强 switch `default ->`，确认所有质量与安全门禁全绿
+- [ ] T033 [P] 对照 `specs/026-lesson26-web-service/contracts/rest-api.md` 检查六个 Controller 的 OpenAPI 注解、11 个端点、统一 `ApiResponse`、CORS 与 `/swagger-ui`，修正遗漏但不增加范围
+- [ ] T034 运行 `./mvnw clean verify`，再用 `rg` 检查本节 Web 业务代码不存在 `System.out`、WebFlux/Reactor/`CompletableFuture`、自建线程池、Spring AI 自动 Tool 执行和增强 switch `default ->`，确认所有质量与安全门禁全绿
 - [ ] T035 按 `specs/026-lesson26-web-service/quickstart.md` 人工验证 11 个 curl 真链路、CLI Session 共享存储、500 不泄漏、Provider 503、60 秒 504、200 并发、审计落库、管理页五区域与 Swagger UI，并记录可复现结果
 
 ---
