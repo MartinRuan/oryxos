@@ -137,4 +137,19 @@ class SessionRepositoryTest {
     assertEquals(session.getId(), recovered.getId(), "重启后获取到的 sessionId 必须保持一致");
     assertEquals(2, recovered.getMessages().size(), "重启后历史消息必须完好保留");
   }
+
+  @Test
+  @DisplayName("会话列表按最后活动时间倒序")
+  void 会话列表按最后活动时间倒序() {
+    LocalDateTime base = LocalDateTime.of(2026, 9, 12, 10, 0);
+    repository.save(
+        new SessionEntity("s-old", "default", "web", "u1", "[]", "ACTIVE", base, base, null));
+    repository.save(
+        new SessionEntity(
+            "s-new", "default", "web", "u2", "[]", "ACTIVE", base, base.plusHours(1), null));
+
+    List<SessionEntity> sessions = repository.findAllByOrderByLastActiveAtDesc();
+
+    assertThat(sessions).extracting(SessionEntity::getSessionId).containsExactly("s-new", "s-old");
+  }
 }

@@ -6,6 +6,8 @@ import com.oryxos.web.common.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -32,14 +34,31 @@ public class GlobalExceptionHandler {
    * @return 错误响应结构
    */
   @ExceptionHandler(OryxException.class)
-  public ApiResponse<Void> handleOryxException(OryxException ex) {
+  public ResponseEntity<ApiResponse<Void>> handleOryxException(OryxException ex) {
     if (log.isWarnEnabled()) {
       log.warn(
           "Business exception occurred: code={}, message={}",
           ex.getErrorCode().getCode(),
           sanitize(ex.getMessage()));
     }
-    return ApiResponse.fail(ex.getErrorCode(), ex.getMessage());
+    return ResponseEntity.status(resolveStatus(ex.getCode()))
+        .body(ApiResponse.fail(ex.getErrorCode(), ex.getMessage()));
+  }
+
+  /**
+   * 处理 Agent Web 调用超时.
+   *
+   * @param ex 超时异常
+   * @return 504 错误响应
+   */
+  @ExceptionHandler(AgentInvocationTimeoutException.class)
+  public ResponseEntity<ApiResponse<Void>> handleAgentInvocationTimeout(
+      AgentInvocationTimeoutException ex) {
+    if (log.isWarnEnabled()) {
+      log.warn("Agent invocation timed out: {}", sanitize(ex.getMessage()));
+    }
+    return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
+        .body(ApiResponse.fail(50400, "Agent invocation timed out"));
   }
 
   /**
@@ -95,6 +114,21 @@ public class GlobalExceptionHandler {
   }
 
   /**
+   * 处理无法解析的 JSON 请求体.
+   *
+   * @param ex JSON 读取异常
+   * @return 固定的参数错误响应
+   */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public ApiResponse<Void> handleUnreadableMessage(HttpMessageNotReadableException ex) {
+    if (log.isWarnEnabled()) {
+      log.warn("Malformed JSON request body");
+    }
+    return ApiResponse.fail(StandardErrorCode.INVALID_PARAMETER);
+  }
+
+  /**
    * 处理不支持的 HTTP 请求方法异常.
    *
    * @param ex 方法不支持异常
@@ -131,10 +165,42 @@ public class GlobalExceptionHandler {
    * @return 错误响应结构
    */
   @ExceptionHandler(Exception.class)
-  @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public ApiResponse<Void> handleGenericException(Exception ex) {
+  public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
     log.error("Unhandled server exception", ex);
-    return ApiResponse.fail(StandardErrorCode.INTERNAL_ERROR, "Internal server error");
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(ApiResponse.fail(StandardErrorCode.INTERNAL_ERROR, "Internal server error"));
+  }
+
+  private HttpStatus resolveStatus(int code) {
+    int category = code / 100;
+    if (category == HttpStatus.BAD_REQUEST.value()) {
+      return HttpStatus.BAD_REQUEST;
+    }
+    if (category == HttpStatus.UNAUTHORIZED.value()) {
+      return HttpStatus.UNAUTHORIZED;
+    }
+    if (category == HttpStatus.FORBIDDEN.value()) {
+      return HttpStatus.FORBIDDEN;
+    }
+    if (category == HttpStatus.NOT_FOUND.value()) {
+      return HttpStatus.NOT_FOUND;
+    }
+    if (category == HttpStatus.METHOD_NOT_ALLOWED.value()) {
+      return HttpStatus.METHOD_NOT_ALLOWED;
+    }
+    if (category == HttpStatus.TOO_MANY_REQUESTS.value()) {
+      return HttpStatus.TOO_MANY_REQUESTS;
+    }
+    if (category == HttpStatus.BAD_GATEWAY.value()) {
+      return HttpStatus.BAD_GATEWAY;
+    }
+    if (category == HttpStatus.SERVICE_UNAVAILABLE.value()) {
+      return HttpStatus.SERVICE_UNAVAILABLE;
+    }
+    if (category == HttpStatus.GATEWAY_TIMEOUT.value()) {
+      return HttpStatus.GATEWAY_TIMEOUT;
+    }
+    return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
   /**

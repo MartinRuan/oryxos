@@ -33,6 +33,11 @@ public class MemoryServiceImpl implements MemoryService {
   }
 
   @Override
+  public String load() {
+    return longTermMemory.load();
+  }
+
+  @Override
   public String buildContext(Session session) {
     String coreMemory = longTermMemory.getCoreMemory();
     if (coreMemory.isBlank()) {

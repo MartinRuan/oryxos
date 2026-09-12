@@ -14,6 +14,13 @@ import org.springframework.stereotype.Repository;
 public interface SessionRepository extends JpaRepository<SessionEntity, String> {
 
   /**
+   * 查询全部会话并按最后活动时间倒序排列.
+   *
+   * @return 会话实体列表
+   */
+  List<SessionEntity> findAllByOrderByLastActiveAtDesc();
+
+  /**
    * 根据 Profile 名称查询所有关联的会话.
    *
    * @param profileName Profile 名称
