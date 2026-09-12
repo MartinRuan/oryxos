@@ -54,6 +54,30 @@ public class MemoryAutoConfiguration {
   }
 
   /**
+   * 将 save_memory 暴露为独立 OryxTool Bean，供统一 ToolExecutor 纳管.
+   *
+   * @param memoryTools 记忆工具集
+   * @return save_memory 工具
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "saveMemoryTool")
+  public OryxTool saveMemoryTool(MemoryTools memoryTools) {
+    return memoryTools.getSaveMemoryTool();
+  }
+
+  /**
+   * 将 recall_memory 暴露为独立 OryxTool Bean，供统一 ToolExecutor 纳管.
+   *
+   * @param memoryTools 记忆工具集
+   * @return recall_memory 工具
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "recallMemoryTool")
+  public OryxTool recallMemoryTool(MemoryTools memoryTools) {
+    return memoryTools.getRecallMemoryTool();
+  }
+
+  /**
    * 暴露记忆工具为 OryxTool 列表，供 ToolRegistry 自动纳管.
    *
    * @param memoryTools 记忆工具集
