@@ -7,6 +7,8 @@ import com.oryxos.core.prompt.PromptBuilder;
 import com.oryxos.core.prompt.impl.PromptBuilderImpl;
 import com.oryxos.core.react.ReActLoop;
 import com.oryxos.core.react.impl.ReActLoopImpl;
+import com.oryxos.core.scheduler.AgentScheduler;
+import com.oryxos.core.service.AgentService;
 import com.oryxos.core.session.InMemorySessionManager;
 import com.oryxos.core.session.SessionManager;
 import com.oryxos.core.tool.ToolAuditRecorder;
@@ -19,6 +21,8 @@ import java.util.Optional;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
  * OryxOS Core 核心模块自动装配配置类.
@@ -111,5 +115,57 @@ public class CoreAutoConfiguration {
       profileLoader.loadProfiles(java.nio.file.Path.of("agents"));
       profileLoader.loadProfiles(java.nio.file.Path.of("profiles"));
     };
+  }
+
+  private static final int SCHEDULER_POOL_SIZE = 4;
+
+  /**
+   * 注册缺省 TaskScheduler 供定时任务使用.
+   *
+   * @return ThreadPoolTaskScheduler 实例
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public TaskScheduler oryxTaskScheduler() {
+    ThreadPoolTaskScheduler ts = new ThreadPoolTaskScheduler();
+    ts.setPoolSize(SCHEDULER_POOL_SIZE);
+    ts.setThreadNamePrefix("oryx-sched-");
+    ts.setWaitForTasksToCompleteOnShutdown(true);
+    ts.initialize();
+    return ts;
+  }
+
+  /**
+   * 注册缺省 AgentScheduler 定时任务调度器.
+   *
+   * @param oryxTaskScheduler 任务调度器
+   * @param profileRegistry Profile 注册中心
+   * @param agentService Agent 统一门面
+   * @param sessionManager 会话管理器
+   * @return AgentScheduler 实例
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public AgentScheduler agentScheduler(
+      TaskScheduler oryxTaskScheduler,
+      com.oryxos.core.profile.ProfileRegistry profileRegistry,
+      AgentService agentService,
+      SessionManager sessionManager) {
+    return new AgentScheduler(
+        oryxTaskScheduler, profileRegistry,
+        agentService, sessionManager);
+  }
+
+  /**
+   * 应用启动后触发定时任务注册. 依赖 profileAutoLoader 先完成加载.
+   *
+   * @param agentScheduler 定时任务调度器
+   * @return ApplicationRunner 启动执行器
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "scheduleAutoRegister")
+  public org.springframework.boot.ApplicationRunner scheduleAutoRegister(
+      AgentScheduler agentScheduler) {
+    return args -> agentScheduler.registerAll();
   }
 }

@@ -303,6 +303,7 @@ public class ProfileLoader {
         if (item instanceof Map) {
           Map<String, Object> scheduleMap = (Map<String, Object>) item;
           Profile.ScheduleConfig scheduleConfig = new Profile.ScheduleConfig();
+          scheduleConfig.setId(getString(scheduleMap, "id"));
           scheduleConfig.setCron(getString(scheduleMap, "cron"));
           scheduleConfig.setMessage(getString(scheduleMap, "message"));
           scheduleConfig.setTimezone(getString(scheduleMap, "timezone", "zone"));
