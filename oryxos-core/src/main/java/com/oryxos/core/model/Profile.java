@@ -1,6 +1,7 @@
 package com.oryxos.core.model;
 
 import java.io.Serializable;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -414,6 +415,7 @@ public class Profile implements Serializable {
   public static class ScheduleConfig implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    private String id;
     private String cron;
     private String message;
     private String timezone;
@@ -432,6 +434,24 @@ public class Profile implements Serializable {
       this.cron = cron;
       this.message = message;
       this.timezone = timezone;
+    }
+
+    /**
+     * 获取任务 ID. 若未显式设置则根据 cron 和 message 派生.
+     *
+     * @return 非空任务标识
+     */
+    public String getId() {
+      if (id != null && !id.isBlank()) {
+        return id;
+      }
+      String c = cron != null ? cron : "";
+      String m = message != null ? message : "";
+      return "sched-" + ((c + ":" + m).hashCode() & 0x7fffffff);
+    }
+
+    public void setId(String id) {
+      this.id = id;
     }
 
     public String getCron() {
@@ -456,6 +476,22 @@ public class Profile implements Serializable {
 
     public void setTimezone(String timezone) {
       this.timezone = timezone;
+    }
+
+    /**
+     * 安全解析时区配置. 非法或为空时回退至系统默认时区.
+     *
+     * @return ZoneId 实例
+     */
+    public ZoneId getZoneId() {
+      if (timezone != null && !timezone.isBlank()) {
+        try {
+          return ZoneId.of(timezone.trim());
+        } catch (Exception ignored) {
+          // 非法时区，回退至系统默认
+        }
+      }
+      return ZoneId.systemDefault();
     }
   }
 
