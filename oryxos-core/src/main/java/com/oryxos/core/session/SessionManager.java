@@ -1,6 +1,7 @@
 package com.oryxos.core.session;
 
 import com.oryxos.core.model.Session;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -56,6 +57,13 @@ public interface SessionManager {
    * @return Session Optional
    */
   Optional<Session> get(String sessionId);
+
+  /**
+   * 列出全部会话，按最后活动时间倒序排列.
+   *
+   * @return 会话只读列表
+   */
+  List<Session> list();
 
   /**
    * 保存或更新会话状态与历史记录.

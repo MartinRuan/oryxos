@@ -56,9 +56,11 @@
   </modules>
 
   <properties>
-    <java.version>17</java.version>
+    <java.version>21</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
+    <!-- P3C 2.1.1 is coupled to PMD 6.55, whose newest Java grammar is 20. -->
+    <pmd.target-jdk>20</pmd.target-jdk>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -267,6 +269,9 @@
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
           <version>${spring-boot.version}</version>
+          <configuration>
+            <skip>true</skip>
+          </configuration>
         </plugin>
 
         <!-- Spotless Plugin (Google Java Format) -->
@@ -301,22 +306,15 @@
           <artifactId>maven-pmd-plugin</artifactId>
           <version>${pmd-plugin.version}</version>
           <configuration>
-            <sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
-            <targetJdk>${java.version}</targetJdk>
+            <targetJdk>${pmd.target-jdk}</targetJdk>
+            <!-- PMD 6 cannot read Java 21 class files; keep P3C source analysis enabled. -->
+            <typeResolution>false</typeResolution>
+            <skipPmdError>false</skipPmdError>
             <printFailingErrors>true</printFailingErrors>
             <verbose>true</verbose>
             <linkXRef>false</linkXRef>
             <rulesets>
-              <ruleset>rulesets/java/ali-comment.xml</ruleset>
-              <ruleset>rulesets/java/ali-concurrent.xml</ruleset>
-              <ruleset>rulesets/java/ali-constant.xml</ruleset>
-              <ruleset>rulesets/java/ali-exception.xml</ruleset>
-              <ruleset>rulesets/java/ali-flowcontrol.xml</ruleset>
-              <ruleset>rulesets/java/ali-naming.xml</ruleset>
-              <ruleset>rulesets/java/ali-oop.xml</ruleset>
-              <ruleset>rulesets/java/ali-orm.xml</ruleset>
-              <ruleset>rulesets/java/ali-other.xml</ruleset>
-              <ruleset>rulesets/java/ali-set.xml</ruleset>
+              <ruleset>${maven.multiModuleProjectDirectory}/config/pmd/p3c.xml</ruleset>
             </rulesets>
           </configuration>
           <dependencies>

@@ -87,7 +87,7 @@ oryxos:
 # SpringDoc OpenAPI Documentation
 springdoc:
   swagger-ui:
-    path: /swagger-ui.html
+    path: /swagger-ui
     tags-sorter: alpha
     operations-sorter: alpha
   api-docs:
@@ -132,4 +132,3 @@ http:
     - "*.feishu.cn"
     - "*.dingtalk.com"
     - "*.weixin.qq.com"
-

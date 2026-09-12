@@ -1,13 +1,14 @@
 package com.oryxos.core.session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.oryxos.core.model.ChatMessage;
 import com.oryxos.core.model.Session;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -87,6 +88,32 @@ class SessionManagerTest {
     sessionManager.archive(session.getId());
 
     Optional<Session> retrieved = sessionManager.get(session.getId());
-    assertFalse(retrieved.isPresent());
+    assertTrue(retrieved.isPresent());
+    assertEquals("ARCHIVED", retrieved.get().getStatus());
+    assertNotNull(retrieved.get().getArchivedAt());
+  }
+
+  @Test
+  @DisplayName("空存储返回空会话列表")
+  void 空存储返回空会话列表() {
+    assertTrue(sessionManager.list().isEmpty());
+  }
+
+  @Test
+  @DisplayName("会话列表按最后活动时间倒序且包含归档会话")
+  void 会话列表按最后活动时间倒序且包含归档会话() {
+    Session older = sessionManager.getOrCreate("web", "older", "default");
+    older.setLastActiveAt(LocalDateTime.of(2026, 9, 12, 10, 0));
+    sessionManager.save(older);
+    Session newer = sessionManager.getOrCreate("web", "newer", "default");
+    newer.setLastActiveAt(LocalDateTime.of(2026, 9, 12, 11, 0));
+    sessionManager.save(newer);
+    sessionManager.archive(older.getId());
+
+    List<Session> sessions = sessionManager.list();
+
+    assertEquals(
+        List.of(newer.getId(), older.getId()), sessions.stream().map(Session::getId).toList());
+    assertEquals("ARCHIVED", sessions.get(1).getStatus());
   }
 }

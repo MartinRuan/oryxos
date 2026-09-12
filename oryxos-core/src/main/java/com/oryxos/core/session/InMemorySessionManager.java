@@ -1,6 +1,9 @@
 package com.oryxos.core.session;
 
 import com.oryxos.core.model.Session;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,6 +38,14 @@ public class InMemorySessionManager implements SessionManager {
   }
 
   @Override
+  public List<Session> list() {
+    Comparator<Session> byLastActiveAt =
+        Comparator.comparing(
+            Session::getLastActiveAt, Comparator.nullsLast(Comparator.reverseOrder()));
+    return sessionStore.values().stream().sorted(byLastActiveAt).toList();
+  }
+
+  @Override
   public void save(Session session) {
     if (session != null && session.getId() != null) {
       sessionStore.put(session.getId(), session);
@@ -43,8 +54,12 @@ public class InMemorySessionManager implements SessionManager {
 
   @Override
   public void archive(String sessionId) {
-    if (sessionId != null) {
-      sessionStore.remove(sessionId);
-    }
+    get(sessionId)
+        .ifPresent(
+            session -> {
+              session.setStatus("ARCHIVED");
+              session.setArchivedAt(LocalDateTime.now());
+              save(session);
+            });
   }
 }

@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class JpaSessionManager implements SessionManager {
 
   private static final Logger log = LoggerFactory.getLogger(JpaSessionManager.class);
+  private static final String ARCHIVED_STATUS = "ARCHIVED";
   private static final String EMPTY_ARRAY_JSON = "[]";
   private static final TypeReference<List<ChatMessageDto>> MESSAGE_LIST_TYPE_REF =
       new TypeReference<>() {};
@@ -89,6 +90,14 @@ public class JpaSessionManager implements SessionManager {
   }
 
   @Override
+  @Transactional(readOnly = true, rollbackFor = Exception.class)
+  public List<Session> list() {
+    return sessionRepository.findAllByOrderByLastActiveAtDesc().stream()
+        .map(this::toDomain)
+        .toList();
+  }
+
+  @Override
   @Transactional(rollbackFor = Exception.class)
   public void save(Session session) {
     if (session == null || session.getId() == null) {
@@ -111,10 +120,12 @@ public class JpaSessionManager implements SessionManager {
         .findById(sessionId.trim())
         .ifPresent(
             entity -> {
-              entity.setStatus("ARCHIVED");
-              entity.setArchivedAt(LocalDateTime.now());
-              sessionRepository.save(entity);
-              log.info("Archived session: {}", sessionId);
+              if (!ARCHIVED_STATUS.equals(entity.getStatus())) {
+                entity.setStatus(ARCHIVED_STATUS);
+                entity.setArchivedAt(LocalDateTime.now());
+                sessionRepository.save(entity);
+                log.info("Archived session: {}", sessionId);
+              }
             });
   }
 

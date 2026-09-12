@@ -13,6 +13,13 @@ import java.util.List;
 public interface MemoryService {
 
   /**
+   * 加载长期记忆的安全只读视图.
+   *
+   * @return 长期记忆文本
+   */
+  String load();
+
+  /**
    * 组装待注入 System Prompt 的记忆上下文（核心记忆与会话必要信息，归档区不整体注入）.
    *
    * @param session 当前会话实体

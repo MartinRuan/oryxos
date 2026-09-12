@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OryxOS Admin</title>
+    <link rel="stylesheet" href="/admin/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">O</span>
+          <div><strong>OryxOS</strong><small>Read-only console</small></div>
+        </div>
+        <nav aria-label="Admin views">
+          <a href="#sessions" data-target="sessions" class="active">Sessions</a>
+          <a href="#profiles" data-target="profiles">Profiles</a>
+          <a href="#tools" data-target="tools">Tools</a>
+          <a href="#memory" data-target="memory">Memory</a>
+          <a href="#runtime" data-target="runtime">Runtime Status</a>
+        </nav>
+        <div class="readonly"><span></span>Observation mode</div>
+      </aside>
+
+      <main>
+        <header>
+          <div><p class="eyebrow">INSTANCE OVERVIEW</p><h1 id="page-title">Sessions</h1></div>
+          <p id="last-updated">Connecting…</p>
+        </header>
+
+        <section id="sessions" class="panel active" aria-labelledby="page-title">
+          <div class="section-heading"><h2>Conversation sessions</h2><p>Newest activity first</p></div>
+          <div id="sessions-content" class="content-grid loading">Loading sessions…</div>
+        </section>
+        <section id="profiles" class="panel">
+          <div class="section-heading"><h2>Agent profiles</h2><p>Safe runtime configuration</p></div>
+          <div id="profiles-content" class="content-grid loading">Loading profiles…</div>
+        </section>
+        <section id="tools" class="panel">
+          <div class="section-heading"><h2>Registered tools</h2><p>Schema metadata only</p></div>
+          <div id="tools-content" class="content-grid loading">Loading tools…</div>
+        </section>
+        <section id="memory" class="panel">
+          <div class="section-heading"><h2>Long-term memory</h2><p>Current stored context</p></div>
+          <pre id="memory-content" class="memory-block loading">Loading memory…</pre>
+        </section>
+        <section id="runtime" class="panel">
+          <div class="section-heading"><h2>Runtime status</h2><p>Application and Provider connectivity</p></div>
+          <div id="runtime-content" class="content-grid loading">Loading runtime status…</div>
+        </section>
+      </main>
+    </div>
+    <script src="/admin/app.js" defer></script>
+  </body>
+</html>

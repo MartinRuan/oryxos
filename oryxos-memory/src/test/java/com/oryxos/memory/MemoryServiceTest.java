@@ -73,4 +73,14 @@ class MemoryServiceTest {
     String context = memoryService.buildContext(session);
     assertTrue(context.isBlank());
   }
+
+  @Test
+  @DisplayName("load复用LongTermMemory完整加载策略")
+  void load复用LongTermMemory完整加载策略() {
+    String memory = "## 核心记忆\ncore\n\n## 归档记忆\narchive";
+    when(longTermMemory.load()).thenReturn(memory);
+
+    assertEquals(memory, memoryService.load());
+    verify(longTermMemory).load();
+  }
 }

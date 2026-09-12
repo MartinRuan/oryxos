@@ -100,13 +100,13 @@ Modules are decoupled through interfaces. Adding a new Channel or Tool requires 
 
 ## Quick Start
 
-**Prerequisites**: Java 21, Maven 3.9+, an LLM API key (DeepSeek / Qwen / OpenAI / Ollama)
+**Prerequisites**: Java 21 and an LLM API key (DeepSeek / Qwen / OpenAI / Ollama). The included Maven Wrapper downloads the pinned Maven version automatically.
 
 ```bash
 # Build
 git clone https://github.com/oryx-labs/oryxos.git
 cd oryxos
-mvn package -DskipTests
+./mvnw package -DskipTests
 
 # Initialize the workspace
 java -jar oryxos-boot/target/oryxos-boot-*.jar init
