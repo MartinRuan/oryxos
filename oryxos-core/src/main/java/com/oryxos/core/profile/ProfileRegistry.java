@@ -1,8 +1,10 @@
 package com.oryxos.core.profile;
 
+import com.oryxos.core.OryxTool;
 import com.oryxos.core.exception.OryxException;
 import com.oryxos.core.exception.StandardErrorCode;
 import com.oryxos.core.model.Profile;
+import com.oryxos.provider.ProviderService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -10,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +37,8 @@ public class ProfileRegistry {
 
   private final Map<String, Profile> profiles = new ConcurrentHashMap<>();
   private ProfileLoader profileLoader;
+  private ProviderService providerService;
+  private List<OryxTool> tools;
 
   public ProfileRegistry() {
     // Default constructor
@@ -44,16 +49,82 @@ public class ProfileRegistry {
     this.profileLoader = profileLoader;
   }
 
+  @Autowired(required = false)
+  public void setProviderService(ProviderService providerService) {
+    this.providerService = providerService;
+  }
+
+  @Autowired(required = false)
+  public void setTools(List<OryxTool> tools) {
+    this.tools = tools != null ? List.copyOf(tools) : List.of();
+  }
+
   /**
-   * 注册 Profile.
+   * 校验并注册 Profile.
    *
    * @param profile Profile 对象
    */
   public void register(Profile profile) {
-    if (profile == null || profile.getName() == null || profile.getName().trim().isEmpty()) {
-      throw new IllegalArgumentException("Profile or profile name must not be null or blank");
+    validate(profile);
+    String name = profile.getName().trim();
+    profile.setName(name);
+    profiles.put(name, profile);
+  }
+
+  /**
+   * 从运行时注册表移除 Profile.
+   *
+   * @param name Profile 名称
+   */
+  public void remove(String name) {
+    if (name != null) {
+      profiles.remove(name.trim());
     }
-    profiles.put(profile.getName().trim(), profile);
+  }
+
+  /**
+   * 只查询运行时注册表是否存在 Profile，不触发磁盘懒加载.
+   *
+   * @param name Profile 名称
+   * @return true 若已注册
+   */
+  public boolean exists(String name) {
+    return name != null && profiles.containsKey(name.trim());
+  }
+
+  private void validate(Profile profile) {
+    if (profile == null || profile.getName() == null || profile.getName().trim().isEmpty()) {
+      throw new OryxException(
+          StandardErrorCode.INVALID_PARAMETER, "Profile 'name' field is required");
+    }
+    if (profile.getProvider() == null) {
+      throw new OryxException(
+          StandardErrorCode.INVALID_PARAMETER, "Profile 'provider' configuration is required");
+    }
+    String providerName = profile.getProvider().getName();
+    if (providerName == null || providerName.trim().isEmpty()) {
+      throw new OryxException(
+          StandardErrorCode.INVALID_PARAMETER, "Profile 'provider.name' field is required");
+    }
+    if (providerService != null && providerService.getProvider(providerName.trim()).isEmpty()) {
+      java.util.Set<String> availableProviders =
+          providerService.listProviders().stream()
+              .map(descriptor -> descriptor.getName())
+              .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+      throw new OryxException(
+          StandardErrorCode.PROVIDER_NOT_FOUND,
+          ProfileLoader.providerNotFoundMessage(
+              profile.getName().trim(), providerName.trim(), availableProviders));
+    }
+    if (tools != null) {
+      java.util.Set<String> registeredTools =
+          tools.stream().map(OryxTool::getName).collect(java.util.stream.Collectors.toSet());
+      for (String toolName : profile.getTools()) {
+        if (!registeredTools.contains(toolName)) {
+          log.warn("Profile [{}] references unregistered tool [{}]", profile.getName(), toolName);
+        }
+      }
+    }
   }
 
   /**
@@ -73,7 +144,7 @@ public class ProfileRegistry {
     }
     profile = tryLoadProfile(normalizedName);
     if (profile != null) {
-      profiles.put(normalizedName, profile);
+      register(profile);
       return Optional.of(profile);
     }
     return Optional.empty();
@@ -151,10 +222,7 @@ public class ProfileRegistry {
    * @return true 若存在
    */
   public boolean containsProfile(String name) {
-    if (name == null) {
-      return false;
-    }
-    return profiles.containsKey(name.trim());
+    return exists(name);
   }
 
   /** 清空注册表. */

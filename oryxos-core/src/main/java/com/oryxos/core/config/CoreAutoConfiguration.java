@@ -112,11 +112,11 @@ public class CoreAutoConfiguration {
   @Order(Ordered.HIGHEST_PRECEDENCE)
   @ConditionalOnMissingBean(name = "profileAutoLoader")
   public org.springframework.boot.ApplicationRunner profileAutoLoader(
+      com.oryxos.core.profile.AgentLoader agentLoader,
       com.oryxos.core.profile.ProfileLoader profileLoader) {
     return args -> {
-      profileLoader.loadProfiles(java.nio.file.Path.of(".oryxos", "agents"));
+      agentLoader.scanAndRegister(java.nio.file.Path.of(".oryxos", "agents"));
       profileLoader.loadProfiles(java.nio.file.Path.of(".oryxos", "profiles"));
-      profileLoader.loadProfiles(java.nio.file.Path.of("agents"));
       profileLoader.loadProfiles(java.nio.file.Path.of("profiles"));
     };
   }

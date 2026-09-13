@@ -100,30 +100,67 @@ public class AgentScheduler {
     Set<String> activeProfiles = new HashSet<>();
     for (Profile profile : profiles) {
       activeProfiles.add(profile.getName());
-      Set<String> activeKeys = new HashSet<>();
-      for (ScheduleConfig schedule : profile.getSchedules()) {
-        String key = schedule.getId();
-        activeKeys.add(key);
-        TaskState state =
-            taskStore.reconcile(
-                profile.getName(),
-                key,
-                key,
-                schedule.getCron(),
-                schedule.getZoneId().getId(),
-                schedule.getMessage());
-        taskBindings.put(state.scheduleId(), new TaskBinding(profile, schedule));
-        if (state.enabled()) {
-          schedule(state.scheduleId(), profile, schedule);
-        }
-      }
-      taskStore.retire(profile.getName(), activeKeys);
+      registerProfile(profile);
     }
+    taskStore.list().stream()
+        .filter(task -> !activeProfiles.contains(task.profileName()))
+        .forEach(
+            task -> {
+              cancel(task.scheduleId());
+              taskBindings.remove(task.scheduleId());
+            });
     taskStore.list().stream()
         .map(TaskState::profileName)
         .filter(profileName -> !activeProfiles.contains(profileName))
         .distinct()
         .forEach(profileName -> taskStore.retire(profileName, Set.of()));
+  }
+
+  /**
+   * 协调并注册单个 Agent 的全部定时任务.
+   *
+   * @param profile Agent 运行配置
+   */
+  public synchronized void registerProfile(Profile profile) {
+    java.util.Objects.requireNonNull(profile, "profile");
+    java.util.Objects.requireNonNull(profile.getName(), "profile.name");
+
+    Set<String> activeKeys = new HashSet<>();
+    Set<String> previousScheduleIds =
+        taskStore.list().stream()
+            .filter(task -> profile.getName().equals(task.profileName()))
+            .map(TaskState::scheduleId)
+            .collect(java.util.stream.Collectors.toSet());
+
+    for (ScheduleConfig schedule : profile.getSchedules()) {
+      String key = schedule.getId();
+      activeKeys.add(key);
+      TaskState state =
+          taskStore.reconcile(
+              profile.getName(),
+              key,
+              key,
+              schedule.getCron(),
+              schedule.getZoneId().getId(),
+              schedule.getMessage());
+      previousScheduleIds.remove(state.scheduleId());
+      cancel(state.scheduleId());
+      taskBindings.put(state.scheduleId(), new TaskBinding(profile, schedule));
+      if (state.enabled()) {
+        schedule(state.scheduleId(), profile, schedule);
+      }
+    }
+
+    previousScheduleIds.forEach(
+        scheduleId -> {
+          cancel(scheduleId);
+          taskBindings.remove(scheduleId);
+        });
+    taskStore.retire(profile.getName(), activeKeys);
+  }
+
+  boolean hasScheduledTask(String scheduleId) {
+    return scheduledTasks.containsKey(scheduleId);
   }
 
   /** 列出活动任务状态. */

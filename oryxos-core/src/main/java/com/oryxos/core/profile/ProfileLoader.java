@@ -443,6 +443,17 @@ public class ProfileLoader {
     return content;
   }
 
+  static String providerNotFoundMessage(
+      String profileName, String providerName, java.util.Collection<String> availableProviders) {
+    java.util.Set<String> sortedProviders =
+        availableProviders != null
+            ? new java.util.TreeSet<>(availableProviders)
+            : java.util.Collections.emptySet();
+    return String.format(
+        "Profile [%s] references unconfigured provider [%s]. Available providers: %s",
+        profileName, providerName, sortedProviders);
+  }
+
   private String getString(Map<String, Object> map, String... keys) {
     for (String key : keys) {
       Object val = map.get(key);
