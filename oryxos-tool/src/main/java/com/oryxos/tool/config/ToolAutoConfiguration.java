@@ -111,6 +111,66 @@ public class ToolAutoConfiguration {
   }
 
   /**
+   * 将 read_file 暴露为独立 OryxTool Bean，供统一 ToolExecutor 纳管.
+   *
+   * @param fileTools 文件工具集
+   * @return read_file 工具
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "readFileTool")
+  public OryxTool readFileTool(FileTools fileTools) {
+    return fileTools.getReadFileTool();
+  }
+
+  /**
+   * 将 write_file 暴露为独立 OryxTool Bean，供统一 ToolExecutor 纳管.
+   *
+   * @param fileTools 文件工具集
+   * @return write_file 工具
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "writeFileTool")
+  public OryxTool writeFileTool(FileTools fileTools) {
+    return fileTools.getWriteFileTool();
+  }
+
+  /**
+   * 将 list_dir 暴露为独立 OryxTool Bean，供统一 ToolExecutor 纳管.
+   *
+   * @param fileTools 文件工具集
+   * @return list_dir 工具
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "listDirTool")
+  public OryxTool listDirTool(FileTools fileTools) {
+    return fileTools.getListDirTool();
+  }
+
+  /**
+   * 将 http_get 暴露为独立 OryxTool Bean，供统一 ToolExecutor 纳管.
+   *
+   * @param httpTools HTTP 工具集
+   * @return http_get 工具
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "httpGetTool")
+  public OryxTool httpGetTool(HttpTools httpTools) {
+    return httpTools.getHttpGetTool();
+  }
+
+  /**
+   * 将 http_post 暴露为独立 OryxTool Bean，供统一 ToolExecutor 纳管.
+   *
+   * @param httpTools HTTP 工具集
+   * @return http_post 工具
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "httpPostTool")
+  public OryxTool httpPostTool(HttpTools httpTools) {
+    return httpTools.getHttpPostTool();
+  }
+
+  /**
    * 注册缺省 NotifyTools.
    *
    * @param sandbox 沙箱检查器

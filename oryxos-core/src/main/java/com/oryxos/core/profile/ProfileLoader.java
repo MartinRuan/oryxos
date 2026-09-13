@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -48,6 +49,7 @@ public class ProfileLoader {
     this.profileRegistry = null;
   }
 
+  @Autowired
   public ProfileLoader(ProfileRegistry profileRegistry) {
     this.profileRegistry = profileRegistry;
   }

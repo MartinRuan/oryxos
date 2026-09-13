@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Component;
 
 /**
  * 工具注册表中心.
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Component;
  *
  * @author OryxOS Team
  */
-@Component
 public class ToolRegistry {
 
   private final Map<String, OryxTool> tools = new ConcurrentHashMap<>();

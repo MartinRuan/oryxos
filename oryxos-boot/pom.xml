@@ -90,6 +90,7 @@
         <configuration>
           <skip>false</skip>
           <mainClass>com.oryxos.boot.OryxApplication</mainClass>
+          <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
         </configuration>
         <executions>
           <execution>
