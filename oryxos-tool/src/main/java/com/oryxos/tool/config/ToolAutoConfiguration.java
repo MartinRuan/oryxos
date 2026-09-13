@@ -14,11 +14,13 @@ import com.oryxos.tool.sandbox.HttpSandboxProperties;
 import com.oryxos.tool.sandbox.Sandbox;
 import com.oryxos.tool.sandbox.ShellSandboxProperties;
 import com.oryxos.tool.sandbox.WhitelistSandbox;
+import java.time.Duration;
 import java.util.List;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -34,6 +36,9 @@ import org.springframework.web.client.RestClient;
 })
 public class ToolAutoConfiguration {
 
+  private static final Duration WEBHOOK_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+  private static final Duration WEBHOOK_READ_TIMEOUT = Duration.ofSeconds(10);
+
   /**
    * 注册缺省 RestClient.Builder.
    *
@@ -42,7 +47,10 @@ public class ToolAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public RestClient restClient() {
-    return RestClient.builder().build();
+    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+    requestFactory.setConnectTimeout(WEBHOOK_CONNECT_TIMEOUT);
+    requestFactory.setReadTimeout(WEBHOOK_READ_TIMEOUT);
+    return RestClient.builder().requestFactory(requestFactory).build();
   }
 
   /**
