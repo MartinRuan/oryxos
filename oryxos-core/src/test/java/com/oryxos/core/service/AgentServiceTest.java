@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 
 @ExtendWith(MockitoExtension.class)
 class AgentServiceTest {
@@ -50,6 +51,7 @@ class AgentServiceTest {
     assertEquals("集群健康状态良好", result);
     verify(sessionManager).save(session);
     assertNull(ProfileContext.get(), "ProfileContext 必须在正常结束后被彻底清空");
+    assertNull(MDC.get("sessionId"), "sessionId MDC 必须在正常结束后被彻底清空");
   }
 
   @Test
@@ -62,5 +64,6 @@ class AgentServiceTest {
 
     assertEquals("LLM 连接中断", ex.getMessage());
     assertNull(ProfileContext.get(), "ProfileContext 必须在异常情况下也被彻底清空，防止线程池污染");
+    assertNull(MDC.get("sessionId"), "sessionId MDC 必须在异常情况下也被彻底清空");
   }
 }

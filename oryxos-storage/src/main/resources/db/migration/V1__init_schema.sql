@@ -47,5 +47,40 @@ CREATE TABLE IF NOT EXISTS llm_calls (
     error_message TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+-- 兼容第 26 节之前创建的 SQLite 文件；新库中字段已存在，配合 continue-on-error 跳过重复列。
+ALTER TABLE llm_calls ADD COLUMN success BOOLEAN NOT NULL DEFAULT 1;
+ALTER TABLE llm_calls ADD COLUMN error_message TEXT;
 CREATE INDEX IF NOT EXISTS idx_llm_calls_session_id ON llm_calls(session_id);
 CREATE INDEX IF NOT EXISTS idx_llm_calls_provider ON llm_calls(provider);
+
+-- 4. 定时任务运行状态
+CREATE TABLE IF NOT EXISTS scheduled_tasks (
+    schedule_id VARCHAR(64) PRIMARY KEY,
+    profile_name VARCHAR(64) NOT NULL,
+    schedule_key VARCHAR(128) NOT NULL,
+    display_name VARCHAR(256) NOT NULL,
+    cron VARCHAR(128) NOT NULL,
+    zone VARCHAR(64) NOT NULL,
+    message TEXT NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT 1,
+    retired BOOLEAN NOT NULL DEFAULT 0,
+    next_run_at TIMESTAMP,
+    last_run_at TIMESTAMP,
+    last_status VARCHAR(32),
+    run_count BIGINT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(profile_name, schedule_key)
+);
+CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_profile ON scheduled_tasks(profile_name);
+
+-- 5. 定时任务执行历史
+CREATE TABLE IF NOT EXISTS task_executions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schedule_id VARCHAR(64),
+    session_id VARCHAR(128) NOT NULL,
+    started_at TIMESTAMP NOT NULL,
+    success BOOLEAN NOT NULL,
+    error_message TEXT,
+    duration_ms BIGINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_task_executions_schedule ON task_executions(schedule_id);

@@ -10,6 +10,7 @@ import com.oryxos.core.session.SessionManager;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 /**
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 public class AgentServiceImpl implements AgentService {
 
   private static final Logger log = LoggerFactory.getLogger(AgentServiceImpl.class);
+  private static final String MDC_SESSION_ID = "sessionId";
 
   private final ProfileRegistry profileRegistry;
   private final ReActLoop reActLoop;
@@ -51,6 +53,8 @@ public class AgentServiceImpl implements AgentService {
 
     Profile profile = profileRegistry.getRequiredProfile(session.getProfileName());
 
+    String previousSessionId = MDC.get(MDC_SESSION_ID);
+    MDC.put(MDC_SESSION_ID, session.getId());
     ProfileContext.set(profile);
     try {
       String response = reActLoop.run(session, userMessage, profile);
@@ -65,6 +69,15 @@ public class AgentServiceImpl implements AgentService {
       throw e;
     } finally {
       ProfileContext.clear();
+      restoreSessionId(previousSessionId);
+    }
+  }
+
+  private void restoreSessionId(String previousSessionId) {
+    if (previousSessionId == null) {
+      MDC.remove(MDC_SESSION_ID);
+    } else {
+      MDC.put(MDC_SESSION_ID, previousSessionId);
     }
   }
 }

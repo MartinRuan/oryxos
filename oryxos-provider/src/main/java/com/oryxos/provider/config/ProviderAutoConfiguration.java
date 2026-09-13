@@ -62,7 +62,8 @@ public class ProviderAutoConfiguration {
                 .build();
 
         try {
-          ChatModel chatModel = ChatModelFactory.createChatModel(descriptor);
+          ChatModel chatModel =
+              ChatModelFactory.createChatModel(descriptor, properties.getDefaultTimeoutSeconds());
           registry.register(descriptor, chatModel);
         } catch (Exception ex) {
           log.warn(

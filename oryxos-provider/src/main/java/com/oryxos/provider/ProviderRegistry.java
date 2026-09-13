@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.stereotype.Component;
 
 /**
  * Provider 显式注册中心. 维护 provider name 到 ChatModel 以及 ProviderDescriptor 的显式映射表. 严格遵循项目宪章原则三：禁用靠扫描
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Component;
  *
  * @author oryxos
  */
-@Component
 public class ProviderRegistry {
 
   private static final Logger log = LoggerFactory.getLogger(ProviderRegistry.class);

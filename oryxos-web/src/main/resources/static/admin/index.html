@@ -11,16 +11,17 @@
       <aside class="sidebar">
         <div class="brand">
           <span class="brand-mark">O</span>
-          <div><strong>OryxOS</strong><small>Read-only console</small></div>
+          <div><strong>OryxOS</strong><small>Operations console</small></div>
         </div>
         <nav aria-label="Admin views">
           <a href="#sessions" data-target="sessions" class="active">Sessions</a>
-          <a href="#profiles" data-target="profiles">Profiles</a>
+          <a href="#profiles" data-target="profiles">Agents</a>
+          <a href="#schedules" data-target="schedules">Schedules</a>
           <a href="#tools" data-target="tools">Tools</a>
           <a href="#memory" data-target="memory">Memory</a>
           <a href="#runtime" data-target="runtime">Runtime Status</a>
         </nav>
-        <div class="readonly"><span></span>Observation mode</div>
+        <div class="readonly"><span></span>Runtime connected</div>
       </aside>
 
       <main>
@@ -34,8 +35,12 @@
           <div id="sessions-content" class="content-grid loading">Loading sessions…</div>
         </section>
         <section id="profiles" class="panel">
-          <div class="section-heading"><h2>Agent profiles</h2><p>Safe runtime configuration</p></div>
+          <div class="section-heading"><h2>Agents</h2><p>Safe runtime configuration</p></div>
           <div id="profiles-content" class="content-grid loading">Loading profiles…</div>
+        </section>
+        <section id="schedules" class="panel">
+          <div class="section-heading"><h2>Scheduled tasks</h2><p>Persistent runtime controls</p></div>
+          <div id="schedules-content" class="content-grid loading">Loading schedules…</div>
         </section>
         <section id="tools" class="panel">
           <div class="section-heading"><h2>Registered tools</h2><p>Schema metadata only</p></div>

@@ -18,6 +18,11 @@ tools:
   - list_dir
   - save_memory
   - recall_memory
+schedules:
+  - id: daily-oryxos-status
+    cron: "0 0 9 * * *"
+    timezone: Asia/Shanghai
+    message: 请调用 notify 工具，通过 dingtalk 发送“OryxOS 每日定时任务已触发”。通知成功后返回简短结果。
 settings:
   max_iterations: 10
 ---

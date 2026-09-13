@@ -8,6 +8,7 @@ import com.oryxos.core.prompt.impl.PromptBuilderImpl;
 import com.oryxos.core.react.ReActLoop;
 import com.oryxos.core.react.impl.ReActLoopImpl;
 import com.oryxos.core.scheduler.AgentScheduler;
+import com.oryxos.core.scheduler.ScheduledTaskStore;
 import com.oryxos.core.service.AgentService;
 import com.oryxos.core.session.InMemorySessionManager;
 import com.oryxos.core.session.SessionManager;
@@ -21,6 +22,8 @@ import java.util.Optional;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -106,6 +109,7 @@ public class CoreAutoConfiguration {
    * @return ApplicationRunner 启动执行器
    */
   @Bean
+  @Order(Ordered.HIGHEST_PRECEDENCE)
   @ConditionalOnMissingBean(name = "profileAutoLoader")
   public org.springframework.boot.ApplicationRunner profileAutoLoader(
       com.oryxos.core.profile.ProfileLoader profileLoader) {
@@ -142,6 +146,7 @@ public class CoreAutoConfiguration {
    * @param profileRegistry Profile 注册中心
    * @param agentService Agent 统一门面
    * @param sessionManager 会话管理器
+   * @param scheduledTaskStore 任务状态与历史存储
    * @return AgentScheduler 实例
    */
   @Bean
@@ -150,10 +155,17 @@ public class CoreAutoConfiguration {
       TaskScheduler oryxTaskScheduler,
       com.oryxos.core.profile.ProfileRegistry profileRegistry,
       AgentService agentService,
-      SessionManager sessionManager) {
+      SessionManager sessionManager,
+      ScheduledTaskStore scheduledTaskStore) {
     return new AgentScheduler(
-        oryxTaskScheduler, profileRegistry,
-        agentService, sessionManager);
+        oryxTaskScheduler, profileRegistry, agentService, sessionManager, scheduledTaskStore);
+  }
+
+  /** 提供无持久化模块时的进程内任务状态存储. */
+  @Bean
+  @ConditionalOnMissingBean
+  public ScheduledTaskStore scheduledTaskStore() {
+    return ScheduledTaskStore.inMemory();
   }
 
   /**
@@ -163,6 +175,7 @@ public class CoreAutoConfiguration {
    * @return ApplicationRunner 启动执行器
    */
   @Bean
+  @Order(Ordered.HIGHEST_PRECEDENCE + 1)
   @ConditionalOnMissingBean(name = "scheduleAutoRegister")
   public org.springframework.boot.ApplicationRunner scheduleAutoRegister(
       AgentScheduler agentScheduler) {

@@ -4,6 +4,7 @@ import com.oryxos.core.model.Profile;
 import com.oryxos.core.profile.ProfileRegistry;
 import com.oryxos.web.common.ApiResponse;
 import com.oryxos.web.dto.ProfileSummary;
+import com.oryxos.web.dto.ScheduleSummary;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Comparator;
@@ -47,6 +48,12 @@ public class ProfileApiController {
         profile.getDescription(),
         profile.getProviderName(),
         profile.getModelName(),
-        List.copyOf(profile.getTools()));
+        List.copyOf(profile.getTools()),
+        profile.getSchedules().stream()
+            .map(
+                schedule ->
+                    new ScheduleSummary(
+                        schedule.getId(), schedule.getCron(), schedule.getZoneId().getId()))
+            .toList());
   }
 }
