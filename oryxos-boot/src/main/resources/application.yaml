@@ -67,6 +67,13 @@ oryxos:
         - deepseek-reasoner
       base-url: https://api.deepseek.com/v1
       api-key: ${DEEPSEEK_API_KEY:mock-key}
+    minimax:
+      type: CLOUD
+      default-model: MiniMax-M2.7
+      supported-models:
+        - MiniMax-M2.7
+      base-url: https://api.minimaxi.com/v1
+      api-key: ${MINIMAX_API_KEY:mock-key}
     kimi:
       type: CLOUD
       default-model: moonshot-v1-8k
@@ -121,6 +128,9 @@ shell:
     - date
     - pwd
     - whoami
+    - python
+    - python3
+    - bash
 http:
   allowed-domains:
     - api.openai.com

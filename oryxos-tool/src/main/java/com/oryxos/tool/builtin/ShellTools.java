@@ -3,6 +3,8 @@ package com.oryxos.tool.builtin;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oryxos.core.OryxTool;
+import com.oryxos.core.context.ProfileContext;
+import com.oryxos.core.model.Profile;
 import com.oryxos.core.model.ToolResult;
 import com.oryxos.tool.sandbox.ActionType;
 import com.oryxos.tool.sandbox.Sandbox;
@@ -11,9 +13,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,16 +36,26 @@ public class ShellTools implements OryxTool {
   private static final int DEFAULT_TIMEOUT_SECONDS = 10;
   private static final String PARAM_COMMAND = "command";
   private static final String PARAM_ARGS = "args";
+  private static final String ARGUMENT_OPTION_PREFIX = "-";
+  private static final Set<String> SCRIPT_INTERPRETERS = Set.of("python", "python3", "bash");
 
   private final Sandbox sandbox;
+  private final Path baseWorkspaceDir;
 
   /**
    * 构造 ShellTools.
    *
    * @param sandbox 沙箱安全检查器
    */
+  @Autowired
   public ShellTools(Sandbox sandbox) {
+    this(sandbox, Path.of("."));
+  }
+
+  ShellTools(Sandbox sandbox, Path baseWorkspaceDir) {
     this.sandbox = sandbox;
+    this.baseWorkspaceDir =
+        baseWorkspaceDir != null ? baseWorkspaceDir.toAbsolutePath().normalize() : Path.of(".");
   }
 
   public Sandbox getSandbox() {
@@ -88,6 +104,11 @@ public class ShellTools implements OryxTool {
 
     // 首行强制沙箱检查
     sandbox.enforce(new SandboxAction(ActionType.SHELL_COMMAND, command));
+    Path agentWorkingDirectory = resolveAgentWorkingDirectory();
+    if (isScriptInterpreter(command)) {
+      Path script = requireAgentScript(args, agentWorkingDirectory);
+      sandbox.enforce(new SandboxAction(ActionType.FILE_READ, script.toString()));
+    }
 
     List<String> commandLine = new ArrayList<>();
     commandLine.add(command);
@@ -96,6 +117,9 @@ public class ShellTools implements OryxTool {
     Process process = null;
     try {
       ProcessBuilder processBuilder = new ProcessBuilder(commandLine);
+      if (agentWorkingDirectory != null && Files.isDirectory(agentWorkingDirectory)) {
+        processBuilder.directory(agentWorkingDirectory.toFile());
+      }
       processBuilder.redirectErrorStream(true);
       process = processBuilder.start();
 
@@ -131,5 +155,53 @@ public class ShellTools implements OryxTool {
     } catch (IOException e) {
       return ToolResult.failure("Failed to execute command: " + e.getMessage(), false);
     }
+  }
+
+  private boolean isScriptInterpreter(String command) {
+    try {
+      Path commandPath = Path.of(command);
+      Path fileName = commandPath.getFileName();
+      return fileName != null && SCRIPT_INTERPRETERS.contains(fileName.toString());
+    } catch (java.nio.file.InvalidPathException e) {
+      return false;
+    }
+  }
+
+  private Path requireAgentScript(List<String> args, Path agentDirectory) {
+    if (agentDirectory == null
+        || args.isEmpty()
+        || args.get(0).startsWith(ARGUMENT_OPTION_PREFIX)) {
+      throw new com.oryxos.tool.sandbox.SandboxViolationException(
+          "Interpreter requires a script file in the current Agent scripts directory");
+    }
+    Path scriptsDirectory = agentDirectory.resolve("scripts").normalize();
+    Path rawScript = Path.of(args.get(0));
+    Path candidate =
+        rawScript.isAbsolute()
+            ? rawScript.normalize()
+            : agentDirectory.resolve(rawScript).normalize();
+    try {
+      Path realScriptsDirectory = scriptsDirectory.toRealPath();
+      Path realScript = candidate.toRealPath();
+      if (!Files.isRegularFile(realScript) || !realScript.startsWith(realScriptsDirectory)) {
+        throw new com.oryxos.tool.sandbox.SandboxViolationException(
+            "Interpreter script must be inside current Agent scripts directory: " + args.get(0));
+      }
+      return realScript;
+    } catch (IOException e) {
+      throw new com.oryxos.tool.sandbox.SandboxViolationException(
+          "Interpreter script is unavailable in current Agent scripts directory: " + args.get(0),
+          e);
+    }
+  }
+
+  private Path resolveAgentWorkingDirectory() {
+    Profile profile = ProfileContext.current();
+    if (profile == null || profile.getName() == null || profile.getName().isBlank()) {
+      return null;
+    }
+    Path agentsRoot = baseWorkspaceDir.resolve(".oryxos").resolve("agents").normalize();
+    Path agentDirectory = agentsRoot.resolve(profile.getName().trim()).normalize();
+    return agentDirectory.startsWith(agentsRoot) ? agentDirectory : null;
   }
 }

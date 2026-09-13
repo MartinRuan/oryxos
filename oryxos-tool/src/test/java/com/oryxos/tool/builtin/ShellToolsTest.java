@@ -8,13 +8,18 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.oryxos.core.context.ProfileContext;
+import com.oryxos.core.model.Profile;
 import com.oryxos.core.model.ToolResult;
 import com.oryxos.tool.sandbox.ActionType;
 import com.oryxos.tool.sandbox.Sandbox;
 import com.oryxos.tool.sandbox.SandboxViolationException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * ShellTools 单元测试.
@@ -65,6 +70,49 @@ class ShellToolsTest {
     assertThatThrownBy(() -> shellTools.execute(inputJson))
         .isInstanceOf(SandboxViolationException.class)
         .hasMessageContaining("Sandbox violation");
+  }
+
+  @Test
+  @DisplayName("解释器只能执行当前 Agent scripts 目录里的脚本")
+  void interpreter_只允许当前Agent脚本目录(@TempDir Path tempDir) throws Exception {
+    Path scripts = tempDir.resolve(".oryxos/agents/report-agent/scripts");
+    Files.createDirectories(scripts);
+    Files.writeString(scripts.resolve("report.py"), "print('ok')");
+    Files.writeString(tempDir.resolve("outside.py"), "print('outside')");
+    ProfileContext.set(
+        Profile.builder()
+            .name("report-agent")
+            .provider(new Profile.ProviderConfig("deepseek", "model", 0.2))
+            .build());
+    ShellTools scopedTools = new ShellTools(sandbox, tempDir);
+    try {
+      ToolResult allowed =
+          scopedTools.execute(
+              """
+              {"command":"python3","args":["scripts/report.py"]}
+              """);
+      assertThat(allowed.isSuccess()).isTrue();
+      assertThat(allowed.getContent()).contains("ok");
+
+      assertThatThrownBy(
+              () ->
+                  scopedTools.execute(
+                      """
+                      {"command":"python3","args":["../../../outside.py"]}
+                      """))
+          .isInstanceOf(SandboxViolationException.class)
+          .hasMessageContaining("scripts");
+      assertThatThrownBy(
+              () ->
+                  scopedTools.execute(
+                      """
+                      {"command":"python3","args":["-c","print(1)"]}
+                      """))
+          .isInstanceOf(SandboxViolationException.class)
+          .hasMessageContaining("script");
+    } finally {
+      ProfileContext.clear();
+    }
   }
 
   @Test

@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
 /**
  * 运行上下文动态加载器实现.
  *
- * <p>核心特征： 1. 无内存缓存：每次调用实时读取文件系统，外部文件修改后下一轮即时生效 2. 软容错：Bootstrap 文件缺失时记录 WARN 日志并优雅跳过 3. 硬校验：显式指定的
- * Skill 文件缺失时抛出 FileNotFoundException 异常
+ * <p>每次调用都重新读取磁盘。目录型 Agent 注入 AGENT.md 正文，私有资源由工具按需读取；历史 Profile 保留原有 Skill 行为.
  *
  * @author oryxos
  */
@@ -24,6 +23,8 @@ import org.springframework.stereotype.Component;
 public class ContextLoaderImpl implements ContextLoader {
 
   private static final Logger log = LoggerFactory.getLogger(ContextLoaderImpl.class);
+  private static final String FRONTMATTER_DELIMITER = "---";
+  private static final int MIN_AGENT_DOCUMENT_LINES = 3;
 
   private final Path baseWorkspaceDir;
 
@@ -48,69 +49,118 @@ public class ContextLoaderImpl implements ContextLoader {
     }
 
     StringBuilder contextBuilder = new StringBuilder();
-
-    // 1. 加载 Bootstrap 文件 (AGENTS.md, SOUL.md, USER.md 等)
-    List<String> bootstrapFiles = profile.getBootstrap();
-    if (bootstrapFiles != null && !bootstrapFiles.isEmpty()) {
-      for (String bootstrapFile : bootstrapFiles) {
-        if (bootstrapFile == null || bootstrapFile.isBlank()) {
-          continue;
-        }
-        Path filePath = resolveFilePath(bootstrapFile.trim());
-        if (Files.exists(filePath) && Files.isRegularFile(filePath)) {
-          try {
-            String content = Files.readString(filePath, StandardCharsets.UTF_8);
-            if (!content.isBlank()) {
-              if (contextBuilder.length() > 0) {
-                contextBuilder.append("\n\n");
-              }
-              contextBuilder
-                  .append("=== Bootstrap: ")
-                  .append(bootstrapFile.trim())
-                  .append(" ===\n")
-                  .append(content.trim());
-            }
-          } catch (IOException e) {
-            log.warn("Failed to read bootstrap file: {}", filePath, e);
-          }
-        } else {
-          log.warn("Bootstrap file not found, skipping gracefully: {}", filePath);
-        }
-      }
+    boolean directoryAgent = appendAgentInstructions(contextBuilder, profile);
+    appendBootstrap(contextBuilder, profile.getBootstrap());
+    if (!directoryAgent) {
+      appendLegacySkills(contextBuilder, profile);
     }
-
-    // 2. 加载绑定的 Skill 描述 / SKILL.md
-    List<String> skillNames = profile.getSkills();
-    if (skillNames != null && !skillNames.isEmpty()) {
-      for (String skillName : skillNames) {
-        if (skillName == null || skillName.isBlank()) {
-          continue;
-        }
-        Path skillPath = resolveSkillPath(profile.getName(), skillName.trim());
-        if (!Files.exists(skillPath) || !Files.isRegularFile(skillPath)) {
-          throw new IllegalStateException(
-              "Required skill file not found for skill: " + skillName + " at " + skillPath);
-        }
-
-        try {
-          String content = Files.readString(skillPath, StandardCharsets.UTF_8);
-          if (!content.isBlank()) {
-            if (contextBuilder.length() > 0) {
-              contextBuilder.append("\n\n");
-            }
-            contextBuilder
-                .append("=== Skill: ")
-                .append(skillName.trim())
-                .append(" ===\n")
-                .append(content.trim());
-          }
-        } catch (IOException e) {
-          throw new IllegalStateException("Failed to read skill file: " + skillPath, e);
-        }
-      }
-    }
-
     return contextBuilder.toString();
+  }
+
+  private boolean appendAgentInstructions(StringBuilder contextBuilder, Profile profile) {
+    Path agentFile = resolveAgentFile(profile.getName());
+    if (agentFile == null || !Files.isRegularFile(agentFile)) {
+      return false;
+    }
+    try {
+      String content = Files.readString(agentFile, StandardCharsets.UTF_8);
+      String instructions = extractInstructions(content, agentFile);
+      appendSection(contextBuilder, "Agent Instructions: " + profile.getName(), instructions);
+      return true;
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to read Agent instructions: " + agentFile, e);
+    }
+  }
+
+  private void appendBootstrap(StringBuilder contextBuilder, List<String> bootstrapFiles) {
+    if (bootstrapFiles == null || bootstrapFiles.isEmpty()) {
+      return;
+    }
+    for (String bootstrapFile : bootstrapFiles) {
+      if (bootstrapFile == null || bootstrapFile.isBlank()) {
+        continue;
+      }
+      Path filePath = resolveFilePath(bootstrapFile.trim());
+      if (Files.exists(filePath) && Files.isRegularFile(filePath)) {
+        try {
+          String content = Files.readString(filePath, StandardCharsets.UTF_8);
+          appendSection(contextBuilder, "Bootstrap: " + bootstrapFile.trim(), content);
+        } catch (IOException e) {
+          log.warn("Failed to read bootstrap file: {}", filePath, e);
+        }
+      } else {
+        log.warn("Bootstrap file not found, skipping gracefully: {}", filePath);
+      }
+    }
+  }
+
+  private void appendLegacySkills(StringBuilder contextBuilder, Profile profile) {
+    List<String> skillNames = profile.getSkills();
+    if (skillNames == null || skillNames.isEmpty()) {
+      return;
+    }
+    for (String skillName : skillNames) {
+      if (skillName == null || skillName.isBlank()) {
+        continue;
+      }
+      Path skillPath = resolveSkillPath(profile.getName(), skillName.trim());
+      if (!Files.exists(skillPath) || !Files.isRegularFile(skillPath)) {
+        throw new IllegalStateException(
+            "Required skill file not found for skill: " + skillName + " at " + skillPath);
+      }
+
+      try {
+        String content = Files.readString(skillPath, StandardCharsets.UTF_8);
+        appendSection(contextBuilder, "Skill: " + skillName.trim(), content);
+      } catch (IOException e) {
+        throw new IllegalStateException("Failed to read skill file: " + skillPath, e);
+      }
+    }
+  }
+
+  private void appendSection(StringBuilder contextBuilder, String title, String content) {
+    if (content == null || content.isBlank()) {
+      return;
+    }
+    if (contextBuilder.length() > 0) {
+      contextBuilder.append("\n\n");
+    }
+    contextBuilder.append("=== ").append(title).append(" ===\n").append(content.trim());
+  }
+
+  private String extractInstructions(String content, Path agentFile) {
+    String normalized = content != null ? content.replace("\r\n", "\n") : "";
+    String[] lines = normalized.split("\n", -1);
+    if (lines.length < MIN_AGENT_DOCUMENT_LINES || !FRONTMATTER_DELIMITER.equals(lines[0].trim())) {
+      throw new IllegalStateException("Invalid AGENT.md frontmatter: " + agentFile);
+    }
+    int closingLine = -1;
+    for (int index = 1; index < lines.length; index++) {
+      if (FRONTMATTER_DELIMITER.equals(lines[index].trim())) {
+        closingLine = index;
+        break;
+      }
+    }
+    if (closingLine < 0) {
+      throw new IllegalStateException("Invalid AGENT.md frontmatter: " + agentFile);
+    }
+    String instructions =
+        String.join("\n", java.util.Arrays.copyOfRange(lines, closingLine + 1, lines.length))
+            .trim();
+    if (instructions.isEmpty()) {
+      throw new IllegalStateException("Agent instructions body is required: " + agentFile);
+    }
+    return instructions;
+  }
+
+  private Path resolveAgentFile(String agentName) {
+    if (agentName == null || agentName.isBlank()) {
+      return null;
+    }
+    Path agentsRoot =
+        baseWorkspaceDir.toAbsolutePath().normalize().resolve(".oryxos").resolve("agents");
+    Path candidate = agentsRoot.resolve(agentName.trim()).resolve("AGENT.md").normalize();
+    return candidate.startsWith(agentsRoot) ? candidate : null;
   }
 
   private Path resolveFilePath(String relativePath) {
