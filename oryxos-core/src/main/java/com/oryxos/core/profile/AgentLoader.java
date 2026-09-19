@@ -109,6 +109,19 @@ public class AgentLoader {
   }
 
   /**
+   * 以内存文本校验并派生 Profile，不产生任何文件或运行时注册副作用.
+   *
+   * @param agentMarkdown 完整 AGENT.md 文本
+   * @return 派生的 Profile
+   */
+  public Profile deriveProfile(String agentMarkdown) {
+    ParsedDocument document = splitDocument(agentMarkdown, Path.of("AGENT.md"));
+    Profile profile = profileLoader.parse(document.frontmatter(), availableProviders);
+    warnUnknownTools(profile);
+    return profile;
+  }
+
+  /**
    * 扫描直接子目录并注册合法 Agent.
    *
    * @param agentsRoot Agent 根目录

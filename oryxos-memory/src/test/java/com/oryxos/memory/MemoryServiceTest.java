@@ -39,7 +39,8 @@ class MemoryServiceTest {
   @Test
   @DisplayName("buildContext返回核心记忆与会话历史的组合_归档区不整体注入")
   void buildContext返回核心记忆与会话历史的组合_归档区不整体注入() {
-    when(longTermMemory.getCoreMemory()).thenReturn("## 核心记忆\n- [2026-09-05] 用户叫小王，偏好用 Java");
+    when(longTermMemory.getCoreMemory("ops-agent"))
+        .thenReturn("## 核心记忆\n- [2026-09-05] 用户叫小王，偏好用 Java");
 
     session.append(ChatMessage.user("今天天气怎么样？"));
     session.append(ChatMessage.assistant("今天北京天气晴朗。"));
@@ -68,10 +69,23 @@ class MemoryServiceTest {
   @Test
   @DisplayName("核心记忆为空时返回空字符串不产生冗余噪声")
   void 核心记忆为空返回空() {
-    when(longTermMemory.getCoreMemory()).thenReturn("## 核心记忆\n");
+    when(longTermMemory.getCoreMemory("ops-agent")).thenReturn("## 核心记忆\n");
 
     String context = memoryService.buildContext(session);
     assertTrue(context.isBlank());
+  }
+
+  @Test
+  @DisplayName("Agent读写检索委托给带Profile名称的存储方法")
+  void Agent读写检索按Profile隔离() {
+    memoryService.remember("Agent事实", MemoryScope.CORE, "ops-agent");
+    verify(longTermMemory).append("Agent事实", MemoryScope.CORE, "ops-agent");
+
+    when(longTermMemory.load("ops-agent")).thenReturn("ops memory");
+    assertEquals("ops memory", memoryService.load("ops-agent"));
+
+    when(longTermMemory.recallByKeyword("Java", "ops-agent")).thenReturn(List.of("Agent命中"));
+    assertEquals(List.of("Agent命中"), memoryService.recall("Java", "ops-agent"));
   }
 
   @Test

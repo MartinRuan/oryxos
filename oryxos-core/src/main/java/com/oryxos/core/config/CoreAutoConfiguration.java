@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -33,6 +34,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
  * @author oryxos
  */
 @AutoConfiguration
+@EnableConfigurationProperties(AgentGenerationProperties.class)
 public class CoreAutoConfiguration {
 
   /**
@@ -112,13 +114,50 @@ public class CoreAutoConfiguration {
   @Order(Ordered.HIGHEST_PRECEDENCE)
   @ConditionalOnMissingBean(name = "profileAutoLoader")
   public org.springframework.boot.ApplicationRunner profileAutoLoader(
-      com.oryxos.core.profile.AgentLoader agentLoader,
+      com.oryxos.core.profile.WorkspaceWatcher workspaceWatcher,
       com.oryxos.core.profile.ProfileLoader profileLoader) {
     return args -> {
-      agentLoader.scanAndRegister(java.nio.file.Path.of(".oryxos", "agents"));
+      workspaceWatcher.start();
       profileLoader.loadProfiles(java.nio.file.Path.of(".oryxos", "profiles"));
       profileLoader.loadProfiles(java.nio.file.Path.of("profiles"));
     };
+  }
+
+  /** Agent 工作区存储. */
+  @Bean
+  @ConditionalOnMissingBean
+  public com.oryxos.core.profile.AgentStore agentStore() {
+    return new com.oryxos.core.profile.AgentStore(java.nio.file.Path.of(".oryxos"));
+  }
+
+  /** Agent 文件与运行时生命周期服务. */
+  @Bean
+  @ConditionalOnMissingBean
+  public com.oryxos.core.profile.AgentLifecycleService agentLifecycleService(
+      com.oryxos.core.profile.AgentStore agentStore,
+      com.oryxos.core.profile.AgentLoader agentLoader,
+      com.oryxos.core.profile.ProfileRegistry profileRegistry,
+      AgentScheduler agentScheduler,
+      ProviderService providerService,
+      SessionManager sessionManager,
+      AgentGenerationProperties generationProperties) {
+    return new com.oryxos.core.profile.AgentLifecycleService(
+        agentStore,
+        agentLoader,
+        profileRegistry,
+        agentScheduler,
+        providerService,
+        sessionManager,
+        generationProperties);
+  }
+
+  /** 工作区热加载监听器. */
+  @Bean(destroyMethod = "close")
+  @ConditionalOnMissingBean
+  public com.oryxos.core.profile.WorkspaceWatcher workspaceWatcher(
+      com.oryxos.core.profile.AgentStore agentStore,
+      com.oryxos.core.profile.AgentLifecycleService lifecycleService) {
+    return new com.oryxos.core.profile.WorkspaceWatcher(agentStore.agentsRoot(), lifecycleService);
   }
 
   private static final int SCHEDULER_POOL_SIZE = 4;

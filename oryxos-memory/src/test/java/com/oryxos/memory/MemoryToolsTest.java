@@ -7,9 +7,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.oryxos.core.OryxTool;
+import com.oryxos.core.context.ProfileContext;
+import com.oryxos.core.model.Profile;
 import com.oryxos.core.model.ToolResult;
 import java.util.Collections;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +35,26 @@ class MemoryToolsTest {
   @BeforeEach
   void setUp() {
     memoryTools = new MemoryTools(memoryService);
+  }
+
+  @AfterEach
+  void tearDown() {
+    ProfileContext.clear();
+  }
+
+  @Test
+  @DisplayName("当前Agent写入与检索使用Profile名称")
+  void 当前Agent写入与检索使用Profile名称() {
+    Profile profile = new Profile();
+    profile.setName("ops-agent");
+    ProfileContext.set(profile);
+    when(memoryService.recall("Java", "ops-agent")).thenReturn(List.of("运维 Java 记忆"));
+
+    assertEquals("已记住", memoryTools.saveMemory("运维偏好", "core"));
+    assertEquals("运维 Java 记忆", memoryTools.recallMemory("Java"));
+
+    verify(memoryService).remember("运维偏好", MemoryScope.CORE, "ops-agent");
+    verify(memoryService).recall("Java", "ops-agent");
   }
 
   @Test

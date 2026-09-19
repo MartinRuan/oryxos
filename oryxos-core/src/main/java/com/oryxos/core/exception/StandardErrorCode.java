@@ -13,6 +13,15 @@ public enum StandardErrorCode implements ErrorCode {
   /** 客户端参数无效 (400 Bad Request). */
   INVALID_PARAMETER(40000, "Invalid parameter"),
 
+  /** Agent 名称已存在. */
+  AGENT_ALREADY_EXISTS(40001, "Agent already exists"),
+
+  /** Agent 定义无效. */
+  AGENT_DEFINITION_INVALID(40002, "Agent definition invalid"),
+
+  /** 模型生成的 Agent 草稿无效. */
+  AGENT_GENERATION_INVALID(40003, "Generated Agent draft invalid"),
+
   /** 未经认证/身份凭据无效 (401 Unauthorized). */
   UNAUTHORIZED(40100, "Unauthorized access"),
 

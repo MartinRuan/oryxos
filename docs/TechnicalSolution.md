@@ -226,11 +226,11 @@ Memory 是 Agent OS 区别于普通 chatbot 的核心能力。三层记忆是完
 
 ![MEMORY.md 内部结构：核心记忆区永远保留，截断和检索只作用在归档记忆区](../website/public/images/docs-memory-structure.svg)
 
-格式不做更严格的规定，Agent 写什么 LLM 自己理解就行，简单但有效；两个分区只是组织方式上的区分。换到 `SqliteMemoryStore` 时同一套"核心/归档"语义落到 `memory_entries` 表的 `scope` 列，换到 `Mem0MemoryStore` 时落到 Mem0 的 metadata——分区约定不变，存储形态随后端而变。
+格式不做更严格的规定，Agent 写什么 LLM 自己理解就行，简单但有效；两个分区只是组织方式上的区分。为兼容单文件并隔离多个 Agent，新写入条目在日期后增加 `[agent:<name>]` 标记；无标记历史条目继续视为共享记忆。按 Agent 读取时只保留名称精确匹配的条目与共享条目，并在返回给 Prompt、Tool 和管理页面前移除内部标记。换到 `SqliteMemoryStore` 时同一套"核心/归档 + Agent 归属"语义落到 `memory_entries` 表的 `scope` 与 Agent 标识列，换到 `Mem0MemoryStore` 时落到 Mem0 的 metadata——语义约定不变，存储形态随后端而变。
 
 ### 5.3 Memory 注入到 system prompt
 
-ReAct 循环每次组装 prompt 时，`MemoryService` 把会话历史和长期记忆（核心记忆区加归档记忆区，经 `LongTermMemoryStore.load()` 取得）提供给 `PromptBuilder`。长期记忆每次重新读不做缓存（契约一），这样 Agent 调用 `save_memory` 后下一轮立刻能看到——Markdown 档每次读一个小文件、SQLite 档每次查库、Mem0 档每次调 API，性能都可接受。扩展阶段可在门面背后加 in-memory cache 加失效机制。
+ReAct 循环每次组装 prompt 时，`MemoryService` 根据 Session 的 Profile 名称提供该 Agent 的核心长期记忆与历史共享记忆，归档区仍不整体注入；`recall_memory` 再按相同 Agent 边界检索归档条目。长期记忆每次重新读不做缓存（契约一），这样 Agent 调用 `save_memory` 后下一轮立刻能看到——Markdown 档每次读一个小文件、SQLite 档每次查库、Mem0 档每次调 API，性能都可接受。扩展阶段可在门面背后加 in-memory cache 加失效机制。
 
 ### 5.4 MEMORY.md 跟 USER.md 的区别
 
@@ -729,6 +729,8 @@ mvn clean package
 写完 Agent 目录后走的 `AgentLoader.deriveProfile → ProfileRegistry.register → AgentScheduler.registerProfile`，与启动扫描是**同一段代码**——保证"API 建的 Agent 和手工丢目录建的 Agent 行为一模一样"。`ProfileRegistry`（`register`/`remove`/`exists`）和 `AgentScheduler`（`registerProfile`/`unregisterProfile` + `scheduledTasks` 句柄表）的运行时注册方法在核心阶段（课程第 29 节）就已立好，本阶段直接调；`generate` 走既有 `ProviderService`（并落 `llm_calls` 审计）。
 
 **一个目录、两条录入路径 + 实时监听。** `.oryxos/agents/` 是**唯一真相源**，填充它两条路殊途同归：API 上传（校验 + 写 Agent 目录）、手工丢目录（scp/git/编辑器）。本阶段新增 `WorkspaceWatcher`（装配层一个守护线程，用 JDK `WatchService`；启动全量扫 + 之后实时监听 `.oryxos/agents/` 变更），**它是统一注册入口**：任何 Agent 目录新增/改/删都调 `AgentLifecycleService.register(agentDir)`（与 API 上传写完目录后调的是**同一个方法**）或注销。于是"上传即上线 = 丢目录即上线、全程免重启"。此外 `WorkspaceApiController` 提供**只读**的工作区文件浏览（`GET /workspace/tree` 列 Agent 目录树、`GET /workspace/file?path=` 读文件内容，**必做防目录穿越**：`normalize()` 后 `startsWith(root)` 校验），供管理台"工作区"页钻进一个 Agent 目录看它的 `AGENT.md`/脚本/子指令。
+
+**管理台详情与运行时导航。** Agent 详情按基本信息、文件、会话、记忆四个 Tab 展示；会话按 `profileName` 精确关联，记忆通过 `GET /api/v1/memory?agent=<name>` 读取该 Agent 专属条目与历史共享条目。OS运行时菜单只承载 Provider、Tool 和 Sandbox 白名单，并允许折叠；会话与长期记忆不在运行时菜单重复展示。
 
 ### 11.4 为什么这几件事要打包在一起交付
 

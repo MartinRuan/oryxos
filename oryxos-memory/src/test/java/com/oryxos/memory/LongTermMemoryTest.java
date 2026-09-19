@@ -107,4 +107,36 @@ class LongTermMemoryTest {
     assertTrue(coreOnly.contains("核心专属偏好"));
     assertFalse(coreOnly.contains("归档流水日志"));
   }
+
+  @Test
+  @DisplayName("Agent记忆只返回自身与历史共享条目")
+  void Agent记忆只返回自身与历史共享条目() throws IOException {
+    memory.append("所有 Agent 都可见", MemoryScope.CORE);
+    memory.append("运维专属偏好", MemoryScope.CORE, "ops-agent");
+    memory.append("销售专属偏好", MemoryScope.CORE, "sales-agent");
+
+    String loaded = memory.load("ops-agent");
+
+    assertTrue(loaded.contains("所有 Agent 都可见"));
+    assertTrue(loaded.contains("运维专属偏好"));
+    assertFalse(loaded.contains("销售专属偏好"));
+    assertFalse(loaded.contains("[agent:ops-agent]"));
+    assertTrue(Files.readString(memoryFilePath).contains("[agent:ops-agent]"));
+  }
+
+  @Test
+  @DisplayName("Agent归档检索不能命中其他Agent记忆")
+  void Agent归档检索不能命中其他Agent记忆() {
+    memory.append("共享 Java 规范", MemoryScope.ARCHIVAL);
+    memory.append("运维 Java 记录", MemoryScope.ARCHIVAL, "ops-agent");
+    memory.append("销售 Java 记录", MemoryScope.ARCHIVAL, "sales-agent");
+
+    List<String> hits = memory.recallByKeyword("Java", "ops-agent");
+
+    assertEquals(2, hits.size());
+    assertTrue(hits.stream().anyMatch(item -> item.contains("共享 Java 规范")));
+    assertTrue(hits.stream().anyMatch(item -> item.contains("运维 Java 记录")));
+    assertFalse(hits.stream().anyMatch(item -> item.contains("销售 Java 记录")));
+    assertFalse(hits.stream().anyMatch(item -> item.contains("[agent:")));
+  }
 }
