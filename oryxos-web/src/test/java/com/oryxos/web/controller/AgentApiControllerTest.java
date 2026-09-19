@@ -7,15 +7,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.oryxos.core.exception.OryxException;
 import com.oryxos.core.exception.StandardErrorCode;
+import com.oryxos.core.model.AgentView;
 import com.oryxos.core.model.Profile;
 import com.oryxos.core.model.Session;
+import com.oryxos.core.profile.AgentLifecycleService;
 import com.oryxos.core.profile.ProfileRegistry;
 import com.oryxos.core.session.SessionManager;
 import com.oryxos.provider.exception.ProviderErrorCode;
@@ -37,6 +42,7 @@ class AgentApiControllerTest {
   private ProfileRegistry profileRegistry;
   private SessionManager sessionManager;
   private AgentInvocationRunner invocationRunner;
+  private AgentLifecycleService lifecycleService;
   private MockMvc mockMvc;
 
   @BeforeEach
@@ -44,9 +50,11 @@ class AgentApiControllerTest {
     profileRegistry = mock(ProfileRegistry.class);
     sessionManager = mock(SessionManager.class);
     invocationRunner = mock(AgentInvocationRunner.class);
+    lifecycleService = mock(AgentLifecycleService.class);
     mockMvc =
         MockMvcBuilders.standaloneSetup(
-                new AgentApiController(profileRegistry, sessionManager, invocationRunner))
+                new AgentApiController(
+                    profileRegistry, sessionManager, invocationRunner, lifecycleService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
   }
@@ -115,6 +123,72 @@ class AgentApiControllerTest {
 
     invoke("ops").andExpect(status().isServiceUnavailable());
     invoke("ops").andExpect(status().isGatewayTimeout());
+  }
+
+  @Test
+  @DisplayName("CRUD与生成端点薄转发生命周期服务")
+  void CRUD与生成端点薄转发生命周期服务() throws Exception {
+    AgentView view =
+        new AgentView(
+            "ops",
+            "Operations",
+            "body",
+            new AgentView.ProviderView("minimax", "MiniMax-M2.7", 0.2),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            "agents/ops/AGENT.md",
+            "---\nname: ops\n---\nbody");
+    when(lifecycleService.generate("创建运维助手")).thenReturn(view.agentMarkdown());
+    when(lifecycleService.create(eq("ops"), any(String.class))).thenReturn(view);
+    when(lifecycleService.list()).thenReturn(List.of(view));
+    when(lifecycleService.get("ops")).thenReturn(view);
+    when(lifecycleService.update(eq("ops"), any(String.class))).thenReturn(view);
+
+    mockMvc
+        .perform(
+            post("/api/v1/agents/generate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sentence\":\"创建运维助手\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data").value(view.agentMarkdown()));
+    mockMvc
+        .perform(
+            post("/api/v1/agents")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"ops\",\"agentMarkdown\":\"---\\nname: ops\\n---\\nbody\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.name").value("ops"));
+    mockMvc.perform(get("/api/v1/agents")).andExpect(status().isOk());
+    mockMvc.perform(get("/api/v1/agents/ops")).andExpect(status().isOk());
+    mockMvc
+        .perform(
+            put("/api/v1/agents/ops")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"agentMarkdown\":\"---\\nname: ops\\n---\\nbody\"}"))
+        .andExpect(status().isOk());
+    mockMvc.perform(delete("/api/v1/agents/ops")).andExpect(status().isOk());
+
+    verify(lifecycleService).delete("ops");
+  }
+
+  @Test
+  @DisplayName("生成句子长度与创建模式冲突返回400")
+  void 非法管理请求返回400() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/agents/generate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sentence\":\"\"}"))
+        .andExpect(status().isBadRequest());
+    mockMvc
+        .perform(
+            post("/api/v1/agents")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"name\":\"ops\",\"agentMarkdown\":\"raw\",\"description\":\"also structured\"}"))
+        .andExpect(status().isBadRequest());
   }
 
   private org.springframework.test.web.servlet.ResultActions invoke(String name) throws Exception {

@@ -85,6 +85,24 @@ class AgentLoaderTest {
   }
 
   @Test
+  void 内存文本校验不创建文件或注册运行时() {
+    ProfileRegistry registry = new ProfileRegistry();
+    AgentLoader loader =
+        new AgentLoader(
+            new ProfileLoader(registry),
+            registry,
+            mock(AgentScheduler.class),
+            Set.of("deepseek"),
+            Set.of());
+
+    Profile profile =
+        loader.deriveProfile("---\nname: generated\nprovider:\n  name: deepseek\n---\n任务正文");
+
+    assertThat(profile.getName()).isEqualTo("generated");
+    assertThat(registry.size()).isZero();
+  }
+
+  @Test
   void 仓库dailyReconcile示例必须能被真实解析器加载() {
     Path projectRoot = Path.of("").toAbsolutePath().normalize();
     if (!Files.isDirectory(projectRoot.resolve(".oryxos"))) {
@@ -92,12 +110,25 @@ class AgentLoaderTest {
     }
     Path agentDir = projectRoot.resolve(".oryxos/agents/daily-reconcile");
 
-    Profile profile = loader().deriveProfile(agentDir);
+    AgentLoader loader = loader();
+    Profile profile = loader.deriveProfile(agentDir);
+    String instructions = loader.load(agentDir).instructions();
 
+    assertThat(instructions)
+        .contains("{\"command\":\"python3\",\"args\":[\"scripts/reconcile.py\"]}")
+        .contains("如果脚本返回 `error`，立即报告配置错误并结束")
+        .doesNotContain("`python scripts/reconcile.py`");
     assertThat(profile.getName()).isEqualTo("daily-reconcile");
     assertThat(profile.getProvider().getName()).isEqualTo("minimax");
     assertThat(profile.getProvider().getModel()).isEqualTo("MiniMax-M2.7");
     assertThat(profile.getProvider().getBaseUrl()).isEqualTo("https://api.minimaxi.com/v1");
+    assertThat(profile.getNotifyChannels())
+        .singleElement()
+        .satisfies(
+            channel -> {
+              assertThat(channel.getName()).isEqualTo("dingtalk");
+              assertThat(channel.getType()).isEqualTo("dingtalk");
+            });
     assertThat(profile.getSchedules())
         .singleElement()
         .satisfies(

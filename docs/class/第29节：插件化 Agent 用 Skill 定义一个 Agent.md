@@ -65,22 +65,23 @@ identity:
   agent_name: 对账小欧
   prompt: 你是一个严谨的对账助手，只根据脚本给出的确定性数据下结论，绝不臆测数字。
 provider:                          # 这个 Agent 自己的运行配置（就是它的 profile）
-  name: minimax
-  model: MiniMax-M2.7
-  base_url: https://api.minimaxi.com/v1
-  api_key: ${MINIMAX_API_KEY}
+  name: deepseek
+  model: deepseek-chat
   temperature: 0.2
 tools: [shell, read_file, notify, save_memory]   # 它要用的系统基础能力（最小权限，20 节）
 notify_channels:
-  - {type: webhook, url: "${OPS_WEBHOOK_URL}"}
+  - name: dingtalk
+    type: dingtalk
+    url: ${DINGTALK_WEBHOOK_URL}
 schedules:                         # 它什么时候自己跑（定时属于 Agent）
   - {id: reconcile-morning, cron: "0 0 9 * * *", zone: Asia/Shanghai,
      message: 到点了，核对昨天的订单对账。}
 ---
 
 你是每日订单对账助手。被触发时，严格按顺序做，不要跳步：
-1. **拿数据（交给脚本）**：运行 `python scripts/reconcile.py`，它返回一段 JSON：
-   `{date, orders_count, settle_count, orders_amount, settle_amount, diffs:[{order_id,kind,detail}]}`。只依据它下结论。
+1. **拿数据（交给脚本）**：调用 shell 时参数必须严格为 `{"command":"python3","args":["scripts/reconcile.py"]}`。
+   `command` 只能放单个可执行文件名；禁止使用 `cmd` 字段，禁止把 `python3 scripts/reconcile.py` 整行放进 `command`，也不要自行执行 `find`/`ls` 探测路径。
+   如果脚本返回 `error`，立即报告配置错误并结束，禁止发送“对账通过”通知。否则它会返回 `{date, orders_count, settle_count, orders_amount, settle_amount, diffs:[{order_id,kind,detail}]}` JSON，只依据它下结论。
 2. **判断**：`diffs` 为空且条数、金额都相等 → 调 notify 发「✅ 对账通过」并结束；否则进第 3 步。
 3. **写报告（规范较长，用到才读）**：读 `skills/report-format.md` 按它的结构和 P0/P1/P2 分级组织报告；
    某条差异的字段含义或是否属于已知可接受差异拿不准，读 `REFERENCE.md` 对照后再定级。
@@ -185,7 +186,7 @@ json.dump({
 Agent 的**指令正文**在被触发时进 system prompt（`ContextLoader` 供给，跟 Bootstrap 同层，无缓存、改完即时生效）。而它自带的**参考、子指令、脚本**不预先全塞进去，按正文指引**用底座的系统基础能力按需取用**：
 
 - 读参考 / 子指令：正文说"报告规范见 `skills/report-format.md`" → 模型用底座的 **`read_file`** 把它读进上下文；
-- 跑脚本：正文说"运行 `python scripts/reconcile.py`" → 模型用底座的 **`shell`/`python`** 跑，**脚本产出进上下文、代码不进**。
+- 跑脚本：正文给出 `shell` 的结构化参数 `{"command":"python3","args":["scripts/reconcile.py"]}` → 模型按 Tool Schema 把可执行文件与 argv 分开传递，**脚本产出进上下文、代码不进**。不得把整行命令塞进 `command`，也不得改用未声明的 `cmd` 字段。
 
 **这里没有新工具、没有能力库、没有全局索引**——渐进式披露完全靠"正文是判断、资源用底座既有的 `read_file`/`shell` 按需取"实现。一个 Agent 内部的资源加载，天然被限制在它自己的目录里（沙箱见 2.4）。
 

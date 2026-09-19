@@ -159,6 +159,38 @@ public class AgentScheduler {
     taskStore.retire(profile.getName(), activeKeys);
   }
 
+  /**
+   * 注销指定 Agent 的全部定时任务与运行时句柄.
+   *
+   * @param profile Agent 运行配置
+   */
+  public synchronized void unregisterProfile(Profile profile) {
+    java.util.Objects.requireNonNull(profile, "profile");
+    java.util.Objects.requireNonNull(profile.getName(), "profile.name");
+    unregisterProfile(profile.getName());
+  }
+
+  /**
+   * 按名称清理已从工作区移走的 Agent 运行时句柄.
+   *
+   * @param profileName Agent 名称
+   */
+  public synchronized void unregisterProfile(String profileName) {
+    if (profileName == null || profileName.isBlank()) {
+      return;
+    }
+    taskStore.list().stream()
+        .filter(task -> profileName.equals(task.profileName()))
+        .map(TaskState::scheduleId)
+        .toList()
+        .forEach(
+            scheduleId -> {
+              cancel(scheduleId);
+              taskBindings.remove(scheduleId);
+            });
+    taskStore.retire(profileName, Set.of());
+  }
+
   boolean hasScheduledTask(String scheduleId) {
     return scheduledTasks.containsKey(scheduleId);
   }

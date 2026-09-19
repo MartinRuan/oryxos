@@ -11,8 +11,10 @@ import com.oryxos.core.model.Profile;
 import com.oryxos.core.profile.ProfileRegistry;
 import com.oryxos.core.service.AgentService;
 import com.oryxos.core.session.SessionManager;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.locks.Lock;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.scheduling.TaskScheduler;
@@ -60,6 +62,33 @@ class AgentSchedulerRegisterTest {
               assertThat(trigger).isInstanceOf(CronTrigger.class);
               assertThat(((CronTrigger) trigger).getExpression()).isEqualTo("0 0 9 * * *");
             });
+  }
+
+  @Test
+  void unregisterProfile取消句柄并退休全部任务() {
+    TaskScheduler taskScheduler = mock(TaskScheduler.class);
+    ScheduledFuture<?> future = mock(ScheduledFuture.class);
+    doReturn(future).when(taskScheduler).schedule(any(Runnable.class), any(Trigger.class));
+    ScheduledTaskStore taskStore = ScheduledTaskStore.inMemory();
+    AgentScheduler scheduler =
+        new AgentScheduler(
+            taskScheduler,
+            mock(ProfileRegistry.class),
+            mock(AgentService.class),
+            mock(SessionManager.class),
+            taskStore);
+    Profile profile = profile();
+    scheduler.registerProfile(profile);
+    String scheduleId = scheduler.list().getFirst().scheduleId();
+    Lock lock = scheduler.lockFor(scheduleId);
+    taskStore.recordExecution(scheduleId, "session-1", Instant.now(), true, null, 5);
+
+    scheduler.unregisterProfile(profile);
+
+    verify(future).cancel(false);
+    assertThat(scheduler.list()).isEmpty();
+    assertThat(scheduler.lockFor(scheduleId)).isSameAs(lock);
+    assertThat(taskStore.executions(scheduleId)).hasSize(1);
   }
 
   private Profile profile() {

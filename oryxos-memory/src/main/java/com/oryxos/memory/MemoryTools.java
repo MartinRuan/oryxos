@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oryxos.core.OryxTool;
+import com.oryxos.core.context.ProfileContext;
+import com.oryxos.core.model.Profile;
 import com.oryxos.core.model.ToolResult;
 import java.util.List;
 import java.util.Locale;
@@ -60,7 +62,12 @@ public class MemoryTools {
       return MSG_EMPTY_CONTENT;
     }
     MemoryScope targetScope = resolveScope(scope);
-    memoryService.remember(content.trim(), targetScope);
+    String profileName = activeProfileName();
+    if (profileName == null) {
+      memoryService.remember(content.trim(), targetScope);
+    } else {
+      memoryService.remember(content.trim(), targetScope, profileName);
+    }
     return MSG_REMEMBERED;
   }
 
@@ -74,7 +81,11 @@ public class MemoryTools {
     if (keyword == null || keyword.isBlank()) {
       return MSG_NOT_FOUND;
     }
-    List<String> hits = memoryService.recall(keyword.trim());
+    String profileName = activeProfileName();
+    List<String> hits =
+        profileName == null
+            ? memoryService.recall(keyword.trim())
+            : memoryService.recall(keyword.trim(), profileName);
     if (hits == null || hits.isEmpty()) {
       return MSG_NOT_FOUND;
     }
@@ -106,6 +117,14 @@ public class MemoryTools {
    */
   public List<OryxTool> getTools() {
     return List.of(saveMemoryTool, recallMemoryTool);
+  }
+
+  private String activeProfileName() {
+    Profile profile = ProfileContext.current();
+    if (profile == null || profile.getName() == null || profile.getName().isBlank()) {
+      return null;
+    }
+    return profile.getName();
   }
 
   private MemoryScope resolveScope(String scope) {

@@ -38,8 +38,14 @@ public class MemoryServiceImpl implements MemoryService {
   }
 
   @Override
+  public String load(String profileName) {
+    return longTermMemory.load(profileName);
+  }
+
+  @Override
   public String buildContext(Session session) {
-    String coreMemory = longTermMemory.getCoreMemory();
+    String profileName = session != null ? session.getProfileName() : null;
+    String coreMemory = longTermMemory.getCoreMemory(profileName);
     if (coreMemory.isBlank()) {
       return "";
     }
@@ -58,7 +64,17 @@ public class MemoryServiceImpl implements MemoryService {
   }
 
   @Override
+  public void remember(String content, MemoryScope scope, String profileName) {
+    longTermMemory.append(content, scope, profileName);
+  }
+
+  @Override
   public List<String> recall(String keyword) {
     return longTermMemory.recallByKeyword(keyword);
+  }
+
+  @Override
+  public List<String> recall(String keyword, String profileName) {
+    return longTermMemory.recallByKeyword(keyword, profileName);
   }
 }

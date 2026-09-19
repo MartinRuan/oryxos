@@ -43,6 +43,9 @@ spring:
 
 # OryxOS Multi-Provider Configuration (Explicit Mapping)
 oryxos:
+  agent-generation:
+    provider: minimax
+    model: MiniMax-M2.7
   default-timeout-seconds: 120
   default-max-retries: 2
   providers:
